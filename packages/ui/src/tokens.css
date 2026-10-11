@@ -1,0 +1,60 @@
+/*
+ * Freelancer OS design tokens. Dark is the default theme; light is a fully
+ * designed alternative (not an inversion). Select with `data-theme` on <html>.
+ * Colour values are also mirrored in tokens.ts for tests and non-CSS consumers.
+ */
+:root,
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --fos-canvas: #101114;
+  --fos-sidebar: #141519;
+  --fos-surface: #181a20;
+  --fos-elevated: #20232b;
+  --fos-text: #f3f4f6;
+  --fos-text-muted: #a1a1aa;
+  --fos-border: #2b2e36;
+  --fos-accent: #a8e66b;
+  --fos-accent-contrast: #0f1a05;
+  --fos-success: #4ade80;
+  --fos-warning: #fbbf24;
+  --fos-danger: #f87171;
+  --fos-info: #60a5fa;
+  --fos-focus: #a8e66b;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --fos-canvas: #f6f7f9;
+  --fos-sidebar: #ffffff;
+  --fos-surface: #ffffff;
+  --fos-elevated: #eef0f4;
+  --fos-text: #14161a;
+  --fos-text-muted: #565b66;
+  --fos-border: #dcdfe6;
+  --fos-accent: #3f7d0f;
+  --fos-accent-contrast: #ffffff;
+  --fos-success: #15803d;
+  --fos-warning: #92600a;
+  --fos-danger: #b42318;
+  --fos-info: #1d4ed8;
+  --fos-focus: #3f7d0f;
+}
+
+:root {
+  --fos-radius-sm: 6px;
+  --fos-radius-md: 10px;
+  --fos-radius-lg: 14px;
+  --fos-shadow-elevated: 0 8px 24px rgb(0 0 0 / 0.28);
+  --fos-font-sans: var(--font-sans, "Inter", ui-sans-serif, system-ui, sans-serif);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

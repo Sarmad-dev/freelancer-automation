@@ -1,0 +1,24 @@
+@import "tailwindcss";
+@import "@freelancer-os/ui/tokens.css";
+
+@source "../../../../packages/ui/src";
+
+@theme inline {
+  --color-canvas: var(--fos-canvas);
+  --color-surface: var(--fos-surface);
+  --color-elevated: var(--fos-elevated);
+  --color-fg: var(--fos-text);
+  --color-muted: var(--fos-text-muted);
+  --color-line: var(--fos-border);
+  --color-accent: var(--fos-accent);
+  --color-success: var(--fos-success);
+  --color-warning: var(--fos-warning);
+  --color-danger: var(--fos-danger);
+  --font-sans: var(--fos-font-sans);
+}
+
+body {
+  background: var(--fos-canvas);
+  color: var(--fos-text);
+  font-family: var(--fos-font-sans);
+}

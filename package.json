@@ -1,0 +1,37 @@
+{
+  "name": "freelancer-os",
+  "private": true,
+  "version": "0.0.0",
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=20.11"
+  },
+  "scripts": {
+    "dev": "turbo run dev --filter=@freelancer-os/web",
+    "dev:api": "cd apps/api && uv run uvicorn app.main:app --reload --port 8000",
+    "dev:all": "pnpm --parallel --filter @freelancer-os/web dev & pnpm dev:api",
+    "build": "turbo run build",
+    "lint": "turbo run lint && pnpm lint:api",
+    "lint:api": "cd apps/api && uv run ruff check . && uv run ruff format --check .",
+    "format": "prettier --write . && cd apps/api && uv run ruff format .",
+    "format:check": "prettier --check . && cd apps/api && uv run ruff format --check .",
+    "typecheck": "turbo run typecheck && pnpm typecheck:api",
+    "typecheck:api": "cd apps/api && uv run mypy app",
+    "test": "turbo run test && pnpm test:api",
+    "test:api": "cd apps/api && uv run pytest",
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build",
+    "db:up": "docker compose up -d postgres redis",
+    "db:down": "docker compose down",
+    "db:migrate": "cd apps/api && uv run alembic upgrade head",
+    "db:downgrade": "cd apps/api && uv run alembic downgrade -1",
+    "db:seed": "cd apps/api && uv run python -m app.cli seed",
+    "contracts:export": "cd apps/api && uv run python -m app.cli export-openapi ../../packages/contracts/openapi.json",
+    "contracts:generate": "pnpm contracts:export && pnpm --filter @freelancer-os/contracts generate",
+    "contracts:check": "bash infra/scripts/check-contracts.sh"
+  },
+  "devDependencies": {
+    "prettier": "^3.9.0",
+    "turbo": "^2.11.0",
+    "typescript": "^5.9.0"
+  }
+}

@@ -1,0 +1,10 @@
+node_modules
+.next
+.turbo
+dist
+coverage
+pnpm-lock.yaml
+packages/contracts/src/generated
+packages/contracts/openapi.json
+apps/api
+*.md

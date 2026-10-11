@@ -1,0 +1,27 @@
+node_modules/
+.pnpm-store/
+.next/
+.turbo/
+dist/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+
+# Env / secrets (never commit)
+.env
+.env.*
+!.env.example
+
+# Local data
+*.sqlite3
+*.db
+.DS_Store

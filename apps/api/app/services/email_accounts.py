@@ -306,10 +306,12 @@ def _upsert_connected_account(
         )
         db.add(account)
     else:
-        if account.credential_id is not None:
-            with contextlib.suppress(CredentialError):
-                store.delete(db, workspace_id, account.credential_id)
+        previous = account.credential_id
         account.credential_id = store.put(db, workspace_id, TOKEN_PURPOSE, secret)
+        db.flush()  # point the account at the new secret before the old one is removed (foreign key)
+        if previous is not None:
+            with contextlib.suppress(CredentialError):
+                store.delete(db, workspace_id, previous)
         account.granted_scopes = list(tokens.scopes)
         account.sync_cursor = None  # a fresh grant starts from a full sync
     mark_healthy(account, now)
@@ -761,9 +763,11 @@ def disconnect(
                 except EmailError:
                     revoked = False
                 break
-        with contextlib.suppress(CredentialError):
-            store.delete(db, ctx.workspace_id, account.credential_id)
+        credential_id = account.credential_id
         account.credential_id = None
+        db.flush()  # detach first: the account references the secret (foreign key)
+        with contextlib.suppress(CredentialError):
+            store.delete(db, ctx.workspace_id, credential_id)
     if not account.is_demo:
         account.status = "disconnected"
         account.sync_cursor = None

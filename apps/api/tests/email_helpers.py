@@ -10,7 +10,6 @@ from urllib.parse import parse_qs, urlparse
 from fastapi.testclient import TestClient
 
 from app.mailbox.demo import DemoConnector
-from app.mailbox.errors import EmailError
 from app.mailbox.gmail import REQUIRED_SCOPES
 from app.mailbox.registry import ConnectorRegistry
 from app.mailbox.types import (
@@ -141,7 +140,9 @@ class FakeProvider:
         result: AccountProfile = self._next(self.profiles)
         return result
 
-    def sync(self, access_token: str, *, cursor: str | None, now: datetime, page_size: int = 25) -> SyncPage:
+    def sync(
+        self, access_token: str, *, cursor: str | None, now: datetime, page_size: int = 25
+    ) -> SyncPage:
         self.calls.append("sync")
         self.access_used.append(access_token)
         self.sync_args.append({"cursor": cursor})

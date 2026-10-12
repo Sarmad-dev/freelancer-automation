@@ -58,6 +58,7 @@ from app.db.models_workflow import (
     WorkflowVersion,
 )
 from app.security.passwords import hash_password
+from app.services.drafts import content_hash
 from app.services.fit_scoring import DEFAULT_CRITERIA, ProfileFacts, Scorer
 from app.services.pipeline import ensure_default_stages
 from app.services.workflows import definition_checksum
@@ -599,7 +600,11 @@ def seed_demo(db: DbSession) -> tuple[bool, uuid.UUID | None]:
         body_text="Hi Jordan, happy to talk next week. (fictional demo draft)",
         status="pending_approval",
         author="ai",
-        content_hash="demo-hash-1",
+        content_hash=content_hash(
+            contacts["northwind"].email,
+            "Re: Website rebuild",
+            "Hi Jordan, happy to talk next week. (fictional demo draft)",
+        ),
         is_sample=True,
     )
     db.add(draft)

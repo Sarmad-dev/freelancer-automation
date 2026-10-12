@@ -20,10 +20,10 @@ from app.services import email_accounts as svc
 router = APIRouter(prefix="/api/v1/email/oauth", tags=["email"])
 
 
-def _back(settings: SettingsDep, **params: str) -> RedirectResponse:
-    response = RedirectResponse(
-        f"{settings.web_base_url.rstrip('/')}/integrations?{urlencode(params)}", status_code=303
-    )
+def _back(**params: str) -> RedirectResponse:
+    # A path, not an absolute URL: the browser resolves it against the site it is on, so a misconfigured WEB_BASE_URL can
+    # never send people (or the redirect) anywhere else.
+    response = RedirectResponse(f"/integrations?{urlencode(params)}", status_code=303)
     response.headers["Cache-Control"] = "no-store"
     response.headers["Referrer-Policy"] = "no-referrer"
     return response
@@ -47,7 +47,7 @@ def oauth_callback(
     try:
         auth: AuthContext = get_auth(request, db, settings)
     except AppError:
-        return _back(settings, email="error", reason="signed_out")
+        return _back(email="error", reason="signed_out")
     info = audit.request_info(request, settings)
     workspace_id: uuid.UUID | None = None
     try:
@@ -77,11 +77,11 @@ def oauth_callback(
                 workspace_id=workspace_id, target_type="email_account", details={"reason": failure.reason},
             )  # fmt: skip
         db.commit()
-        return _back(settings, email="error", reason=failure.reason)
+        return _back(email="error", reason=failure.reason)
     audit.record(
         db, "email.account_connected", info=info, actor_user_id=auth.user.id,
         workspace_id=workspace_id, target_type="email_account", target_id=str(account.id),
         details={"provider": account.provider},
     )  # fmt: skip
     db.commit()
-    return _back(settings, email="connected", provider=account.provider)
+    return _back(email="connected", provider=account.provider)

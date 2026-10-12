@@ -380,6 +380,9 @@ function Harness({ target = "qualified" }: { target?: (typeof KEYS)[number] }) {
   );
 }
 
+/** The page's own live region. Toasts announce through a second status region that appears on a delay. */
+const liveStatus = () => document.querySelector<HTMLElement>('p[role="status"]');
+
 const renderHarness = (target?: (typeof KEYS)[number]) =>
   render(
     <ToastProvider>
@@ -396,7 +399,7 @@ describe("useMoveDeal", () => {
     await waitFor(() => expect(screen.getByTestId("ops")).toHaveTextContent("move:settled"));
     expect(screen.getByTestId("busy")).toHaveTextContent("false");
     expect(refresh).toHaveBeenCalledTimes(1);
-    expect(screen.getByRole("status")).toHaveTextContent("Moved Big project to Qualified");
+    expect(liveStatus()).toHaveTextContent("Moved Big project to Qualified");
   });
 
   it("forgets a refused move completely", async () => {
@@ -405,7 +408,7 @@ describe("useMoveDeal", () => {
     renderHarness();
     await user.click(screen.getByRole("button", { name: "go" }));
     await waitFor(() =>
-      expect(screen.getByRole("status")).toHaveTextContent("Couldn't move Big project: Nope."),
+      expect(liveStatus()).toHaveTextContent("Couldn't move Big project: Nope."),
     );
     expect(screen.getByTestId("ops")).toHaveTextContent("");
     expect(refresh).not.toHaveBeenCalled();

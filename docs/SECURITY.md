@@ -124,6 +124,9 @@ Zero-width/bidi-control characters are stripped (D29). Knowledge `source_ref` ac
 plain label (`javascript:`, `data:` and any `scheme://` are refused). Knowledge and profile writes are owner-only; members
 get read access. Audit details for these actions are limited to field *names*, counts, kinds and versions, never content.
 
+## CSV import and export
+Imports accept only data in the file the user chose; nothing is fetched. Files are size/row/column limited, parsed strictly (a malformed quote is an error, not silently swallowed data) and every cell is validated like the equivalent form field (email, public website, phone, lengths, control and invisible characters). Preview and import are owner-only. The raw file is never stored; the import record keeps counts and a capped list of row problems, and its audit event only carries counts. Exports and error reports are owner-only, audited by count, capped, served with `no-store`/`nosniff`, and neutralise spreadsheet formulas in every cell. Do-not-contact is derived from the suppression list and is shown on leads and contacts and in imports; nothing in this phase sends email.
+
 ## Known gaps (tracked)
 
 - **No email verification yet** (`email_verified_at` is always null). Consequently sign-up reveals whether an

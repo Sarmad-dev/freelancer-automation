@@ -43,7 +43,7 @@ export default async function HomePage() {
               href="/leads"
               className="inline-flex h-9 items-center rounded-md border border-line bg-elevated px-4 text-sm font-medium text-fg hover:brightness-110"
             >
-              Preview Leads
+              Open Leads
             </Link>
           </EmptyState>
         </section>

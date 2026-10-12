@@ -168,6 +168,10 @@ class Lead(TenantMixin, Timestamps, Base):
         CheckConstraint(
             "fit_score IS NULL OR (fit_score >= 0 AND fit_score <= 100)", name="fit_score_range"
         ),
+        CheckConstraint(
+            "budget_signal IS NULL OR budget_signal IN ('low', 'medium', 'high')",
+            name="budget_signal_values",
+        ),
         tenant_fk("leads", "company_id", "companies"),
         tenant_fk("leads", "contact_id", "contacts"),
         tenant_fk("leads", "stage_id", "pipeline_stages"),
@@ -176,6 +180,7 @@ class Lead(TenantMixin, Timestamps, Base):
         Index("ix_leads_workspace_company", "workspace_id", "company_id"),
         Index("ix_leads_workspace_contact", "workspace_id", "contact_id"),
         Index("ix_leads_workspace_last_activity", "workspace_id", "last_activity_at"),
+        Index("ix_leads_workspace_archived", "workspace_id", "archived_at"),
     )
 
     id: Mapped[uuid.UUID] = pk_column()
@@ -192,6 +197,9 @@ class Lead(TenantMixin, Timestamps, Base):
     # Fit score with evidence (MVP Prompt 6). The breakdown is explanatory data, never a secret.
     fit_score: Mapped[int | None] = mapped_column(Integer)
     fit_explanation: Mapped[dict[str, Any] | None] = mapped_column(JSON)
+    fit_scored_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Budget as the freelancer understands it (user-supplied; never inferred). NULL = unknown.
+    budget_signal: Mapped[str | None] = mapped_column(String(10))
     next_action: Mapped[str | None] = mapped_column(String(300))
     next_action_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_activity_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -333,3 +341,58 @@ class Task(TenantMixin, Timestamps, Base):
     created_by: Mapped[str] = mapped_column(String(20), nullable=False, default="user")
     idempotency_key: Mapped[str | None] = mapped_column(String(100))
     is_sample: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+
+class FitScoringConfig(TenantMixin, Timestamps, Base):
+    """The freelancer's fit criteria: one row per workspace, versioned so stale scores can be recognised."""
+
+    __tablename__ = "fit_scoring_configs"
+    __table_args__ = (
+        UniqueConstraint("workspace_id", name="uq_fit_scoring_configs_workspace"),
+        UniqueConstraint("workspace_id", "id", name="uq_fit_scoring_configs_workspace_id_id"),
+        CheckConstraint("version >= 1", name="version_positive"),
+    )
+
+    id: Mapped[uuid.UUID] = pk_column()
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    criteria: Mapped[list[dict[str, Any]]] = mapped_column(JSON, nullable=False)
+    updated_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="SET NULL")
+    )
+
+
+class ImportJob(TenantMixin, Timestamps, Base):
+    """One CSV import: what was asked, what happened and the (capped) row errors for the downloadable report.
+
+    Raw file contents are NOT kept; only counts and per-row problems (row number, column, message and the
+    offending value, truncated).
+    """
+
+    __tablename__ = "import_jobs"
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "id", name="uq_import_jobs_workspace_id_id"),
+        check_in("status", domain.IMPORT_STATUSES),
+        check_in("duplicate_strategy", domain.DUPLICATE_STRATEGIES),
+        CheckConstraint(
+            "total_rows >= 0 AND created_count >= 0 AND updated_count >= 0 "
+            "AND skipped_count >= 0 AND error_count >= 0",
+            name="counts_non_negative",
+        ),
+        Index("ix_import_jobs_workspace_created", "workspace_id", "created_at"),
+    )
+
+    id: Mapped[uuid.UUID] = pk_column()
+    filename: Mapped[str] = mapped_column(String(200), nullable=False)
+    status: Mapped[str] = mapped_column(String(12), nullable=False, default="completed")
+    duplicate_strategy: Mapped[str] = mapped_column(String(10), nullable=False)
+    mapping: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
+    total_rows: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    created_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    updated_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    skipped_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    error_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    errors: Mapped[list[dict[str, Any]]] = mapped_column(JSON, nullable=False, default=list)
+    errors_truncated: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="SET NULL")
+    )

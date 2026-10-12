@@ -45,6 +45,9 @@ cookie (`lib/server-api.ts`, `lib/workspace.ts`); editing UIs are client compone
 proxy and then `router.refresh()`. Stored text is always rendered as React text nodes, and links are re-validated to
 http(s) in the browser (`lib/safe-url.ts`).
 
+## Leads, scoring and import (MVP Prompt 6)
+`routers/leads|companies|contacts|fit_scoring|imports` call `services/crm.py` (companies/contacts: find-or-create, duplicates, serialisation), `services/leads.py` (lead rules, stage sync, timeline, tags), `services/fit_scoring.py` (pure scoring functions plus config persistence), `services/lead_import.py` and `services/csvio.py` (strict CSV reading/writing) and `services/lead_export.py`. Scoring, import and export are plain functions of the database and the request, so they run the same from an API call, a test, or later from the workflow engine. In the web app, `/leads` is a section with four tabs (Leads, Companies, Contacts, Fit scoring) plus detail pages and the import wizard; list pages are server components driven by validated URL parameters, so filters, sorting and pagination are links and work without JavaScript.
+
 ## Contracts
 FastAPI is the single source of truth. `pnpm contracts:generate` exports `packages/contracts/openapi.json`
 and regenerates `src/generated/api.d.ts` (openapi-typescript). The web app uses `openapi-fetch` through

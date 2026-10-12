@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session as DbSession
 from alembic import command
 from app.config import get_settings
 from app.db.models import Membership, User, Workspace
-from app.db.models_crm import PipelineStage
+from app.db.models_crm import Lead, PipelineStage
 from app.db.session import get_engine, get_sessionmaker
 from tests.conftest import alembic_config
 
@@ -301,6 +301,110 @@ def test_0004_migrates_existing_knowledge_and_profiles_safely_and_rolls_back() -
             )
             assert rows == {"Kept": "approved", "Old": "disabled"}
         command.upgrade(cfg, "head")  # and forward again
+        get_engine().dispose()
+        get_sessionmaker.cache_clear()
+        with get_sessionmaker()() as db:
+            db.delete(db.get(Workspace, ws_id))
+            db.commit()
+
+
+# ----------------------------------------------------------------------------------------------------
+# Revision 0005: lead scoring configuration, budget signal and CSV import jobs
+# ----------------------------------------------------------------------------------------------------
+def test_0005_clears_unexplained_scores_adds_tables_and_rolls_back() -> None:
+    import uuid
+    from datetime import UTC, datetime
+
+    import sqlalchemy as sa
+    from sqlalchemy.exc import IntegrityError
+
+    cfg = alembic_config(get_settings().database_url)
+    now = datetime.now(UTC)
+    ws_id, legacy_id, explained_id, unscored_id = (uuid.uuid4() for _ in range(4))
+    leads = sa.table(
+        "leads",
+        *(
+            sa.column(n, t)
+            for n, t in [
+                ("id", sa.Uuid()),
+                ("workspace_id", sa.Uuid()),
+                ("title", sa.String()),
+                ("status", sa.String()),
+                ("fit_score", sa.Integer()),
+                ("fit_explanation", sa.JSON()),
+                ("is_sample", sa.Boolean()),
+                ("created_at", sa.DateTime(timezone=True)),
+                ("updated_at", sa.DateTime(timezone=True)),
+            ]
+        ),
+    )
+    with at_revision("0004"):
+        assert "import_jobs" not in _tables() and "fit_scoring_configs" not in _tables()
+        with get_sessionmaker()() as db:
+            db.add(Workspace(id=ws_id, name="legacy leads"))
+            db.flush()
+            common = {
+                "workspace_id": ws_id,
+                "status": "new",
+                "is_sample": True,
+                "created_at": now,
+                "updated_at": now,
+            }
+            db.execute(
+                sa.insert(leads),
+                [
+                    {
+                        **common,
+                        "id": legacy_id,
+                        "title": "Hard-coded demo score",
+                        "fit_score": 82,
+                        "fit_explanation": {
+                            "summary": "invented",
+                            "criteria": {"service_match": True},
+                        },
+                    },
+                    {
+                        **common,
+                        "id": explained_id,
+                        "title": "Properly explained",
+                        "fit_score": 70,
+                        "fit_explanation": {"version": 1, "band": "strong"},
+                    },
+                    {
+                        **common,
+                        "id": unscored_id,
+                        "title": "Never scored",
+                        "fit_score": None,
+                        "fit_explanation": None,
+                    },
+                ],
+            )
+            db.commit()
+
+        command.upgrade(cfg, "head")
+        get_engine().dispose()
+        get_sessionmaker.cache_clear()
+        assert {"import_jobs", "fit_scoring_configs"} <= _tables()
+        with get_sessionmaker()() as db:
+            legacy, explained, unscored = (
+                db.get(Lead, i) for i in (legacy_id, explained_id, unscored_id)
+            )
+            # A number nobody can explain is removed rather than shown as if it meant something.
+            assert legacy.fit_score is None and legacy.fit_explanation is None  # type: ignore[union-attr]
+            assert explained.fit_score == 70 and explained.fit_explanation["band"] == "strong"  # type: ignore[union-attr]
+            assert unscored.fit_score is None and unscored.budget_signal is None  # type: ignore[union-attr]
+            legacy.budget_signal = "enormous"  # type: ignore[union-attr]
+            with pytest.raises(IntegrityError):
+                db.flush()
+            db.rollback()
+
+        command.downgrade(cfg, "0004")
+        get_engine().dispose()
+        get_sessionmaker.cache_clear()
+        assert "import_jobs" not in _tables() and "fit_scoring_configs" not in _tables()
+        columns = {c["name"] for c in inspect(get_engine()).get_columns("leads")}
+        assert "budget_signal" not in columns and "fit_scored_at" not in columns
+        command.upgrade(cfg, "head")
         get_engine().dispose()
         get_sessionmaker.cache_clear()
         with get_sessionmaker()() as db:

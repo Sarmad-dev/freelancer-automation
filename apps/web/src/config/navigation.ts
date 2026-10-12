@@ -44,8 +44,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     label: "Leads",
     href: "/leads",
     icon: Users,
-    status: "planned",
-    phase: "MVP Prompt 6",
+    status: "available",
     description: "Leads, companies and contacts with CSV import, filtering and fit scoring.",
   },
   {
@@ -154,7 +153,32 @@ const EXTRA_ROUTE_LABELS: Record<string, string> = {
 const SUBPAGE_LABELS: Record<string, string> = {
   "/ai-workspace/profile": "Profile",
   "/ai-workspace/knowledge": "Knowledge",
+  "/leads/companies": "Companies",
+  "/leads/contacts": "Contacts",
+  "/leads/scoring": "Fit scoring",
+  "/leads/import": "Import",
 };
+
+const ID = "[0-9a-fA-F-]{36}";
+
+/** Detail pages: the list they belong to (when it has its own page) and their own label. */
+const DETAIL_ROUTES: readonly {
+  pattern: RegExp;
+  parent?: { label: string; href: string };
+  label: string;
+}[] = [
+  {
+    pattern: new RegExp(`^/leads/companies/${ID}$`),
+    parent: { label: "Companies", href: "/leads/companies" },
+    label: "Company",
+  },
+  {
+    pattern: new RegExp(`^/leads/contacts/${ID}$`),
+    parent: { label: "Contacts", href: "/leads/contacts" },
+    label: "Contact",
+  },
+  { pattern: new RegExp(`^/leads/${ID}$`), label: "Lead" },
+];
 
 export function resolveBreadcrumbs(pathname: string): Crumb[] {
   const current = NAV_ITEMS.find((i) => i.href !== "/" && isActivePath(pathname, i.href));
@@ -173,5 +197,10 @@ export function resolveBreadcrumbs(pathname: string): Crumb[] {
       : { label: current.label, href: current.href },
   );
   if (sub) crumbs.push({ label: sub });
+  const detail = DETAIL_ROUTES.find((d) => d.pattern.test(pathname));
+  if (detail) {
+    if (detail.parent) crumbs.push(detail.parent);
+    crumbs.push({ label: detail.label });
+  }
   return crumbs;
 }

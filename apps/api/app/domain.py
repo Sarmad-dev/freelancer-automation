@@ -16,6 +16,12 @@ KNOWLEDGE_STATUSES = ("draft", "pending_review", "approved", "rejected")
 PROFILE_TONES = ("professional", "friendly", "direct", "warm", "concise", "formal")
 
 LEAD_STATUSES = ("new", "contacted", "replied", "qualified", "nurturing", "won", "lost")
+BUDGET_SIGNALS = ("low", "medium", "high")
+# Ordered smallest to largest so "adjacent size" can be recognised when scoring.
+COMPANY_SIZES = ("1", "2-10", "11-50", "51-200", "201-1000", "1000+")
+FIT_CRITERIA = ("service_match", "industry", "geography", "company_size", "budget")
+IMPORT_STATUSES = ("completed", "failed")
+DUPLICATE_STRATEGIES = ("skip", "update")
 ACTIVITY_KINDS = ("note", "email", "call", "meeting", "stage_change", "task", "system")
 TASK_STATUSES = ("open", "done", "dismissed")
 TASK_PRIORITIES = ("low", "normal", "high")

@@ -40,6 +40,7 @@ Follow the playbook's MVP prompts in order; each phase ends with updated docs an
 | 3 | Authentication, workspace, onboarding | **Done** |
 | 4 | Domain model and API foundations | **Done** |
 | 5 | Freelancer profile and approved knowledge | **Done** |
-| 6–16 | Leads, pipeline, AI, email, inbox, workflows, approvals, integrations, analytics, release readiness | Not started |
+| 6 | Leads, contacts, companies, CSV import, fit scoring | **Done** |
+| 7–16 | Pipeline, AI, email, inbox, workflows, approvals, integrations, analytics, release readiness | Not started |
 
 See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for details.

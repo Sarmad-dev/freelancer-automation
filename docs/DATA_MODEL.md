@@ -1,7 +1,7 @@
 # Data model
 
-_Status: MVP Prompt 5. 36 application tables (plus Alembic's version table). Source of truth: `apps/api/app/db/models*.py`;
-migrations: `apps/api/alembic/versions` (`0003_domain_model` added 26 tables: everything except the Identity group, `freelancer_profiles` and `audit_events`; `0004_profile_fields_and_knowledge_review` added the profile fields, the knowledge review lifecycle and `knowledge_item_versions`)._
+_Status: MVP Prompt 6. 38 application tables (plus Alembic's version table). Source of truth: `apps/api/app/db/models*.py`;
+migrations: `apps/api/alembic/versions` (`0003_domain_model` added 26 tables: everything except the Identity group, `freelancer_profiles` and `audit_events`; `0004_profile_fields_and_knowledge_review` added the profile fields, the knowledge review lifecycle and `knowledge_item_versions`; `0005_leads_fit_scoring_and_csv_import` added `fit_scoring_configs`, `import_jobs` and the lead budget/score-time columns)._
 
 ## Entities
 
@@ -9,7 +9,7 @@ migrations: `apps/api/alembic/versions` (`0003_domain_model` added 26 tables: ev
 |---|---|---|
 | Identity & tenancy | `users`, `workspaces`, `memberships`, `sessions`, `password_reset_tokens`, `onboarding_progress` | MVP: one personal workspace, one `owner` membership. Roles `owner/admin/member` are CHECK-constrained so teams can be added without a schema change. |
 | Profile & knowledge | `freelancer_profiles`, `knowledge_items`, `knowledge_item_versions` | Profile has a `version` (optimistic concurrency). Knowledge has provenance (`source_type` manual/upload/extracted, `source_ref`, `created_by_user_id`), review `status` (`draft`/`pending_review`/`approved`/`rejected`), `version`, approver and an independent `is_enabled` switch. Only items that are `approved` **and** enabled may reach AI context. `knowledge_item_versions` holds one content snapshot per version (cascade-deleted with the item). |
-| CRM | `companies`, `contacts`, `leads`, `tags`, `lead_tags`, `pipeline_stages`, `opportunities`, `activities`, `tasks` | Leads carry `fit_score` + `fit_explanation` (JSON) and provenance (`source`, `source_retrieved_at`). |
+| CRM | `companies`, `contacts`, `leads`, `tags`, `lead_tags`, `pipeline_stages`, `opportunities`, `activities`, `tasks`, `fit_scoring_configs`, `import_jobs` | Leads carry `fit_score` + `fit_explanation` (JSON), `budget_signal` and provenance (`source`, `source_retrieved_at`). `fit_scoring_configs` holds the user's criteria (one versioned row per workspace); `import_jobs` records CSV imports (counts and a capped error list, never the file). |
 | Email & outreach | `email_accounts`, `conversations`, `messages`, `drafts`, `suppression_entries` | Message **metadata only** (no body column yet). Drafts carry `content_hash` / `approved_content_hash` so approval binds to exact content. |
 | Integrations & secrets | `integration_connections`, `credential_secrets` | Connections hold a `credential_id` only. Secrets live encrypted in `credential_secrets`. |
 | Workflows | `workflows`, `workflow_versions`, `workflow_nodes`, `workflow_edges`, `workflow_runs`, `workflow_step_runs`, `approval_requests` | Versions are immutable snapshots (nodes/edges are rows). A run is pinned to one version. |
@@ -80,3 +80,14 @@ Soft deletion is used only where users reasonably want records back; everything 
 - **Profile fields** added: `excluded_customers`, `differentiators`, `pricing_guidance`, `preferred_cta` (and `version`).
   Private fields (`pricing_guidance`, `excluded_customers`, `tone_notes`, business goal) are never part of the public summary.
 - **Deletion:** deleting an item removes its history. Existing drafts are not rewritten (they keep their own stored text).
+
+## Leads, fit scoring and CSV import (MVP Prompt 6)
+- **Provenance.** Companies, contacts and leads carry `source` (a label such as `manual`, `CSV import`, or a name from the file's own source column) and `source_retrieved_at` (when data that came from outside the app was brought in; null for things typed by hand). Nothing is fetched or scraped; enrichment from approved sources will use the same two columns.
+- **Pipeline link.** A lead has a `status` and a `stage_id`. Default stage keys equal the statuses (`new`, `contacted`, `replied`, `qualified`, `won`, `lost`), so changing one moves the other; the extra stages (`meeting`, `proposal`) move the stage only. Prompt 7 builds the pipeline views on top.
+- **Fit score.** `fit_score` is `NULL` or a multiple of 5 (0-100). `fit_explanation` (JSON, `version: 1`) holds the band (`strong` >= 70, `possible` >= 45, `weak`, `insufficient`), the per-criterion outcome with evidence, the weights, `confidence` (share of the weighting that had data), warnings, and the `config_version` / `profile_version` it was computed with, so a score can be recognised as stale. Scores that predate explanations were cleared by migration 0005.
+- **Criteria.** `fit_scoring_configs.criteria` is the list of five criteria (service match, industry, geography, company size, budget), each with `enabled`, `weight` (1-10) and its own options; `version` increases only when the content changes.
+- **Budget** is a user-supplied signal (`low`/`medium`/`high`, NULL = unknown). It is never inferred.
+- **Do-not-contact** is not stored on contacts: it is derived from `suppression_entries` by email, so it cannot drift and every send path sees the same answer.
+- **Imports.** `import_jobs` keeps the file name, mapping (column names only), counts, and up to 1,000 per-row problems (row number, column, message, offending value truncated to 200 characters, and whether the row was an error or a skipped duplicate). The raw file is never stored.
+- **Archive, not delete.** Companies, contacts and leads are archived (`archived_at`); archived records are read-only until restored. Deleting a lead or workspace still cascades as described above.
+

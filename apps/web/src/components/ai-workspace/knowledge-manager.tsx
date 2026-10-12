@@ -21,7 +21,8 @@ import {
   Th,
   useToast,
 } from "@freelancer-os/ui";
-import { browserApi, isSessionLost, redirectToSignIn, toFailure } from "@/lib/api-client";
+import { browserApi, toFailure } from "@/lib/api-client";
+import { describeFailure, type MutationFailure } from "@/lib/mutation-error";
 import { formatDate, safeExternalUrl } from "@/lib/safe-url";
 import {
   KINDS,
@@ -41,33 +42,9 @@ import {
   type KnowledgeVersionOut,
 } from "./knowledge-model";
 
-type Failure = { title: string; text: string; reload?: boolean };
+type Failure = MutationFailure;
 
-/** Shared error handling for every mutation: expired session -> sign in, otherwise a readable message. */
-function failureFrom(
-  error: unknown,
-  response?: Response,
-): { failure: Failure; fields: Record<string, string> } | null {
-  const f = toFailure(error, response);
-  if (isSessionLost(f)) {
-    redirectToSignIn("expired");
-    return null;
-  }
-  if (f.code === "stale_version") {
-    return {
-      failure: { title: "This item changed", text: f.message, reload: true },
-      fields: {},
-    };
-  }
-  return {
-    failure: {
-      title: Object.keys(f.fields).length > 0 ? "Some fields need attention" : "That didn't work",
-      text:
-        Object.keys(f.fields).length > 0 ? "Fix the highlighted fields and try again." : f.message,
-    },
-    fields: f.fields,
-  };
-}
+const failureFrom = describeFailure;
 
 function ItemFields({
   form,

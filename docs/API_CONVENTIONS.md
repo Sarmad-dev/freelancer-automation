@@ -27,7 +27,7 @@ Every list returns `{"items": [...], "total": N, "limit": L, "offset": O}` (`Pag
 |---|---|
 | `limit` | 1-100, default 25 |
 | `offset` | 0-100000, default 0 |
-| `sort` | comma-separated, `-` prefix = descending, max 3 fields, **allow-listed per endpoint**; anything else is `422` with `fields.sort` listing the allowed names |
+| `sort` | comma-separated, `-` prefix = descending, max 3 fields, **allow-listed per endpoint**; anything else is `422` with `fields.sort` listing the allowed names. NULLs always sort last; text sorts (names, titles) are case-insensitive |
 | filters | explicit, documented query params (e.g. `q`); `LIKE` wildcards in user input are escaped |
 
 Ordering is always deterministic (a unique tie-breaker is appended), so pages never overlap or skip. Offset pagination is fine for the MVP's data sizes; switch hot lists to keyset pagination if they grow (the response envelope can gain `next_cursor` additively).
@@ -50,3 +50,7 @@ Timestamps are ISO-8601 UTC instants; a `*_timezone` field carries the user's in
 2. Migration (`alembic revision --autogenerate`, then review) + a test for each new constraint.
 3. Schemas in `app/schemas/`, router using `WorkspaceDep`, `scoped_select`/`get_scoped_or_404`, `page_params`/`paginate`.
 4. Isolation tests with two users (see `tests/test_api_conventions.py`), then `pnpm contracts:generate`.
+
+## CSV endpoints
+`GET .../leads/export` and `GET .../imports/{id}/errors.csv` return `text/csv; charset=utf-8` with a UTF-8 BOM (so spreadsheet apps read accents correctly), `Content-Disposition: attachment`, `Cache-Control: no-store` and `X-Content-Type-Options: nosniff`. Cells that could be read as formulas are prefixed with `'`. Both are owner-only. Imports are JSON (`{content, mapping, duplicate_strategy, filename}`) rather than multipart: the browser reads the file, the API never sees a file upload, and the typed client can call it.
+

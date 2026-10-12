@@ -140,6 +140,146 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workspaces/{workspace_id}/companies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List companies */
+        get: operations["list_companies_api_v1_workspaces__workspace_id__companies_get"];
+        put?: never;
+        /** Create a company */
+        post: operations["create_company_api_v1_workspaces__workspace_id__companies_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspace_id}/companies/{company_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a company */
+        get: operations["get_company_api_v1_workspaces__workspace_id__companies__company_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Edit a company */
+        patch: operations["update_company_api_v1_workspaces__workspace_id__companies__company_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspace_id}/companies/{company_id}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Archive a company (hidden from lists; leads and contacts keep their link) */
+        post: operations["archive_company_api_v1_workspaces__workspace_id__companies__company_id__archive_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspace_id}/companies/{company_id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Restore a company */
+        post: operations["restore_company_api_v1_workspaces__workspace_id__companies__company_id__restore_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspace_id}/contacts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List contacts */
+        get: operations["list_contacts_api_v1_workspaces__workspace_id__contacts_get"];
+        put?: never;
+        /** Create a contact */
+        post: operations["create_contact_api_v1_workspaces__workspace_id__contacts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspace_id}/contacts/{contact_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a contact */
+        get: operations["get_contact_api_v1_workspaces__workspace_id__contacts__contact_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Edit a contact */
+        patch: operations["update_contact_api_v1_workspaces__workspace_id__contacts__contact_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspace_id}/contacts/{contact_id}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Archive a contact (hidden from lists; leads keep their link) */
+        post: operations["archive_contact_api_v1_workspaces__workspace_id__contacts__contact_id__archive_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspace_id}/contacts/{contact_id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Restore a contact */
+        post: operations["restore_contact_api_v1_workspaces__workspace_id__contacts__contact_id__restore_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workspaces/{workspace_id}/demo-mode": {
         parameters: {
             query?: never;
@@ -150,6 +290,110 @@ export interface paths {
         get?: never;
         /** Turn demo mode on or off */
         put: operations["set_demo_mode_api_v1_workspaces__workspace_id__demo_mode_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspace_id}/fit-scoring": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Current fit-scoring criteria */
+        get: operations["get_config_api_v1_workspaces__workspace_id__fit_scoring_get"];
+        /** Save the criteria (and by default recompute every active lead) */
+        put: operations["put_config_api_v1_workspaces__workspace_id__fit_scoring_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspace_id}/fit-scoring/rescore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Recompute the score of every active lead */
+        post: operations["rescore_api_v1_workspaces__workspace_id__fit_scoring_rescore_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspace_id}/imports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Import history */
+        get: operations["list_imports_api_v1_workspaces__workspace_id__imports_get"];
+        put?: never;
+        /** Import the CSV. Valid rows are saved; problem rows are skipped and listed in the error report. */
+        post: operations["run_import_api_v1_workspaces__workspace_id__imports_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspace_id}/imports/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Check a CSV and show what an import would do. Nothing is saved. */
+        post: operations["preview_api_v1_workspaces__workspace_id__imports_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspace_id}/imports/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get an import */
+        get: operations["get_import_api_v1_workspaces__workspace_id__imports__job_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspace_id}/imports/{job_id}/errors.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download the error report (rows that failed validation or were skipped as duplicates) */
+        get: operations["error_report_api_v1_workspaces__workspace_id__imports__job_id__errors_csv_get"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -272,6 +516,162 @@ export interface paths {
         /** Content history (newest first) */
         get: operations["versions_api_v1_workspaces__workspace_id__knowledge__item_id__versions_get"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspace_id}/leads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List leads */
+        get: operations["list_leads_api_v1_workspaces__workspace_id__leads_get"];
+        put?: never;
+        /** Create a lead (manual entry; no external source needed) */
+        post: operations["create_lead_api_v1_workspaces__workspace_id__leads_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspace_id}/leads/bulk-tags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add and/or remove tags on many leads */
+        post: operations["bulk_tag_api_v1_workspaces__workspace_id__leads_bulk_tags_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspace_id}/leads/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Export the filtered leads as CSV (owner only) */
+        get: operations["export_leads_api_v1_workspaces__workspace_id__leads_export_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspace_id}/leads/{lead_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a lead */
+        get: operations["get_lead_api_v1_workspaces__workspace_id__leads__lead_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Edit a lead */
+        patch: operations["update_lead_api_v1_workspaces__workspace_id__leads__lead_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspace_id}/leads/{lead_id}/activities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Activity timeline (newest first) */
+        get: operations["list_activities_api_v1_workspaces__workspace_id__leads__lead_id__activities_get"];
+        put?: never;
+        /** Log a note, call or meeting */
+        post: operations["add_activity_api_v1_workspaces__workspace_id__leads__lead_id__activities_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspace_id}/leads/{lead_id}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Archive a lead */
+        post: operations["archive_lead_api_v1_workspaces__workspace_id__leads__lead_id__archive_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspace_id}/leads/{lead_id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Restore a lead */
+        post: operations["restore_lead_api_v1_workspaces__workspace_id__leads__lead_id__restore_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspace_id}/leads/{lead_id}/score": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Recompute the fit score with the current criteria and profile */
+        post: operations["rescore_lead_api_v1_workspaces__workspace_id__leads__lead_id__score_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspace_id}/leads/{lead_id}/tags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Replace a lead's tags */
+        put: operations["put_tags_api_v1_workspaces__workspace_id__leads__lead_id__tags_put"];
         post?: never;
         delete?: never;
         options?: never;
@@ -488,6 +888,44 @@ export interface components {
              */
             status: string;
         };
+        /** ActivityCreate */
+        ActivityCreate: {
+            /** Body */
+            body?: string | null;
+            /**
+             * Kind
+             * @default note
+             * @enum {string}
+             */
+            kind: "note" | "call" | "meeting";
+            /** Summary */
+            summary: string;
+        };
+        /** ActivityOut */
+        ActivityOut: {
+            /** Actor User Id */
+            actor_user_id: string | null;
+            /** Body */
+            body: string | null;
+            /** Details */
+            details: {
+                [key: string]: unknown;
+            };
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Kind */
+            kind: string;
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+            /** Summary */
+            summary: string;
+        };
         /**
          * AiContext
          * @description Everything a model is allowed to know about the freelancer, and nothing else.
@@ -520,6 +958,158 @@ export interface components {
             /** Password Reset Enabled */
             password_reset_enabled: boolean;
         };
+        /** BudgetCriterion */
+        BudgetCriterion: {
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            key: "budget";
+            /**
+             * Weight
+             * @description Relative importance, 1-10.
+             * @default 1
+             */
+            weight: number;
+        };
+        /** BulkTagRequest */
+        BulkTagRequest: {
+            /** Add Tag Ids */
+            add_tag_ids?: string[];
+            /** Lead Ids */
+            lead_ids: string[];
+            /** Remove Tag Ids */
+            remove_tag_ids?: string[];
+        };
+        /** BulkTagResult */
+        BulkTagResult: {
+            /** Leads */
+            leads: number;
+            /** Tags Added */
+            tags_added: number;
+            /** Tags Removed */
+            tags_removed: number;
+        };
+        /** CompanyCreate */
+        CompanyCreate: {
+            /** Industry */
+            industry?: string | null;
+            /** Location */
+            location?: string | null;
+            /** Name */
+            name: string;
+            /** Notes */
+            notes?: string | null;
+            /** Size Label */
+            size_label?: ("1" | "2-10" | "11-50" | "51-200" | "201-1000" | "1000+") | null;
+            /** Source */
+            source?: string | null;
+            /** Website */
+            website?: string | null;
+        };
+        /** CompanyOut */
+        CompanyOut: {
+            /** Archived At */
+            archived_at: string | null;
+            /**
+             * Contact Count
+             * @description Active contacts linked to this company.
+             */
+            contact_count: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Domain */
+            domain: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Industry */
+            industry: string | null;
+            /** Is Sample */
+            is_sample: boolean;
+            /**
+             * Lead Count
+             * @description Active leads linked to this company.
+             */
+            lead_count: number;
+            /** Location */
+            location: string | null;
+            /** Name */
+            name: string;
+            /** Notes */
+            notes: string | null;
+            /** Size Label */
+            size_label: string | null;
+            /** Source */
+            source: string | null;
+            /** Source Retrieved At */
+            source_retrieved_at: string | null;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Website */
+            website: string | null;
+        };
+        /** CompanyPatch */
+        CompanyPatch: {
+            /** Industry */
+            industry?: string | null;
+            /** Location */
+            location?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /** Size Label */
+            size_label?: ("1" | "2-10" | "11-50" | "51-200" | "201-1000" | "1000+") | null;
+            /** Source */
+            source?: string | null;
+            /** Website */
+            website?: string | null;
+        };
+        /** CompanyRef */
+        CompanyRef: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+        };
+        /** CompanySizeCriterion */
+        CompanySizeCriterion: {
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            key: "company_size";
+            /** Preferred */
+            preferred?: ("1" | "2-10" | "11-50" | "51-200" | "201-1000" | "1000+")[];
+            /**
+             * Weight
+             * @description Relative importance, 1-10.
+             * @default 1
+             */
+            weight: number;
+        };
         /** Completeness */
         Completeness: {
             /** Filled */
@@ -528,6 +1118,99 @@ export interface components {
             missing: components["schemas"]["MissingField"][];
             /** Total */
             total: number;
+        };
+        /** ContactCreate */
+        ContactCreate: {
+            /** Company Id */
+            company_id?: string | null;
+            /** Email */
+            email?: string | null;
+            /** Full Name */
+            full_name: string;
+            /** Notes */
+            notes?: string | null;
+            /** Phone */
+            phone?: string | null;
+            /** Role Title */
+            role_title?: string | null;
+            /** Source */
+            source?: string | null;
+        };
+        /** ContactOut */
+        ContactOut: {
+            /** Archived At */
+            archived_at: string | null;
+            /** Company Id */
+            company_id: string | null;
+            /** Company Name */
+            company_name: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Do Not Contact
+             * @description The email is on the suppression list. Nothing may be sent to it.
+             */
+            do_not_contact: boolean;
+            /** Email */
+            email: string | null;
+            /** Full Name */
+            full_name: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Is Sample */
+            is_sample: boolean;
+            /** Lead Count */
+            lead_count: number;
+            /** Notes */
+            notes: string | null;
+            /** Phone */
+            phone: string | null;
+            /** Role Title */
+            role_title: string | null;
+            /** Source */
+            source: string | null;
+            /** Source Retrieved At */
+            source_retrieved_at: string | null;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** ContactPatch */
+        ContactPatch: {
+            /** Company Id */
+            company_id?: string | null;
+            /** Email */
+            email?: string | null;
+            /** Full Name */
+            full_name?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /** Phone */
+            phone?: string | null;
+            /** Role Title */
+            role_title?: string | null;
+            /** Source */
+            source?: string | null;
+        };
+        /** ContactRef */
+        ContactRef: {
+            /** Email */
+            email: string | null;
+            /** Full Name */
+            full_name: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
         };
         /** ContextFact */
         ContextFact: {
@@ -546,6 +1229,29 @@ export interface components {
             title: string;
             /** Version */
             version: number;
+        };
+        /** CriterionResult */
+        CriterionResult: {
+            /** Evidence */
+            evidence: components["schemas"]["Evidence"][];
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "match" | "partial" | "miss" | "unknown";
+            /**
+             * Points
+             * @description weight x (1 match, 0.5 partial, 0 miss). Unknown counts for nothing.
+             */
+            points: number;
+            /** Reason */
+            reason: string;
+            /** Weight */
+            weight: number;
         };
         /** DemoModeRequest */
         DemoModeRequest: {
@@ -577,6 +1283,15 @@ export interface components {
         ErrorResponse: {
             error: components["schemas"]["ErrorBody"];
         };
+        /** Evidence */
+        Evidence: {
+            /** Field */
+            field: string;
+            /** Note */
+            note?: string | null;
+            /** Value */
+            value?: string | null;
+        };
         /** ExperienceStep */
         ExperienceStep: {
             /**
@@ -591,6 +1306,106 @@ export interface components {
             summary: string;
             /** Years */
             years: number;
+        };
+        /** FitConfigIn */
+        FitConfigIn: {
+            /** Criteria */
+            criteria: (components["schemas"]["ServiceMatchCriterion"] | components["schemas"]["IndustryCriterion"] | components["schemas"]["GeographyCriterion"] | components["schemas"]["CompanySizeCriterion"] | components["schemas"]["BudgetCriterion"])[];
+            /** Expected Version */
+            expected_version?: number | null;
+            /**
+             * Rescore
+             * @description Recompute every active lead's score right away.
+             * @default true
+             */
+            rescore: boolean;
+        };
+        /** FitConfigOut */
+        FitConfigOut: {
+            /** Criteria */
+            criteria: (components["schemas"]["ServiceMatchCriterion"] | components["schemas"]["IndustryCriterion"] | components["schemas"]["GeographyCriterion"] | components["schemas"]["CompanySizeCriterion"] | components["schemas"]["BudgetCriterion"])[];
+            /**
+             * Rescored
+             * @description Leads recomputed by this save.
+             */
+            rescored?: number | null;
+            /** Updated At */
+            updated_at: string | null;
+            /**
+             * Version
+             * @description 0 = built-in defaults, never saved.
+             */
+            version: number;
+        };
+        /** FitExplanation */
+        FitExplanation: {
+            /**
+             * Band
+             * @enum {string}
+             */
+            band: "strong" | "possible" | "weak" | "insufficient";
+            /**
+             * Capped
+             * @description Score was limited because the lead matches a client type you don't take.
+             */
+            capped: boolean;
+            /**
+             * Computed At
+             * Format: date-time
+             */
+            computed_at: string;
+            /**
+             * Confidence
+             * @description Share of the total weighting that had data (0-1).
+             */
+            confidence: number;
+            /** Config Version */
+            config_version: number;
+            /** Criteria */
+            criteria: components["schemas"]["CriterionResult"][];
+            /** Known Weight */
+            known_weight: number;
+            /**
+             * Method
+             * @constant
+             */
+            method: "rules";
+            /** Profile Version */
+            profile_version: number;
+            /** Score */
+            score: number | null;
+            /** Summary */
+            summary: string;
+            /** Total Weight */
+            total_weight: number;
+            /** Version */
+            version: number;
+            /** Warnings */
+            warnings: string[];
+        };
+        /** GeographyCriterion */
+        GeographyCriterion: {
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            key: "geography";
+            /**
+             * Preferred
+             * @description Places, regions or words such as 'Remote'.
+             */
+            preferred?: string[];
+            /**
+             * Weight
+             * @description Relative importance, 1-10.
+             * @default 1
+             */
+            weight: number;
         };
         /** GoalStep */
         GoalStep: {
@@ -629,6 +1444,209 @@ export interface components {
             /** Version */
             version: string;
         };
+        /** ImportCounts */
+        ImportCounts: {
+            /** Create */
+            create: number;
+            /** Error */
+            error: number;
+            /** Skip Duplicate */
+            skip_duplicate: number;
+            /** Update */
+            update: number;
+        };
+        /** ImportErrorOut */
+        ImportErrorOut: {
+            /** Column */
+            column: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "error" | "skipped";
+            /** Message */
+            message: string;
+            /**
+             * Row
+             * @description Line number in the file (the header is line 1).
+             */
+            row: number;
+            /** Value */
+            value: string;
+        };
+        /** ImportJobOut */
+        ImportJobOut: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Created Count */
+            created_count: number;
+            /** Duplicate Strategy */
+            duplicate_strategy: string;
+            /** Error Count */
+            error_count: number;
+            /** Errors Truncated */
+            errors_truncated: boolean;
+            /** Filename */
+            filename: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Skipped Count */
+            skipped_count: number;
+            /** Status */
+            status: string;
+            /** Suppressed */
+            suppressed?: number | null;
+            /** Total Rows */
+            total_rows: number;
+            /** Updated Count */
+            updated_count: number;
+        };
+        /**
+         * ImportMapping
+         * @description Which CSV column feeds each field (the column's header text), or null to ignore the field.
+         */
+        ImportMapping: {
+            /**
+             * Budget
+             * @description low, medium or high.
+             */
+            budget?: string | null;
+            /** Company */
+            company?: string | null;
+            /** Company Size */
+            company_size?: string | null;
+            /** Email */
+            email?: string | null;
+            /** Industry */
+            industry?: string | null;
+            /** Location */
+            location?: string | null;
+            /**
+             * Name
+             * @description Contact's full name.
+             */
+            name?: string | null;
+            /** Next Action */
+            next_action?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /** Phone */
+            phone?: string | null;
+            /**
+             * Role
+             * @description Contact's job title.
+             */
+            role?: string | null;
+            /** Source */
+            source?: string | null;
+            /** Status */
+            status?: string | null;
+            /**
+             * Tags
+             * @description Separated by ; or | or ,
+             */
+            tags?: string | null;
+            /**
+             * Title
+             * @description Lead title.
+             */
+            title?: string | null;
+            /**
+             * Website
+             * @description Company website.
+             */
+            website?: string | null;
+        };
+        /** ImportPreview */
+        ImportPreview: {
+            counts: components["schemas"]["ImportCounts"];
+            /** Delimiter */
+            delimiter: string;
+            /** Errors */
+            errors: components["schemas"]["ImportErrorOut"][];
+            /** Errors Truncated */
+            errors_truncated: boolean;
+            /** Headers */
+            headers: string[];
+            mapping: components["schemas"]["ImportMapping"];
+            /**
+             * Mapping Problem
+             * @description Why nothing was analysed (for example, no name, email or company column is mapped).
+             */
+            mapping_problem: string | null;
+            /**
+             * Rows
+             * @description The first rows, with what will happen to each.
+             */
+            rows: components["schemas"]["ImportRowPreview"][];
+            suggested_mapping: components["schemas"]["ImportMapping"];
+            /**
+             * Suppressed
+             * @description Rows whose email is on your do-not-contact list.
+             */
+            suppressed: number;
+            /** Total Rows */
+            total_rows: number;
+        };
+        /** ImportPreviewRequest */
+        ImportPreviewRequest: {
+            /**
+             * Content
+             * @description The CSV text.
+             */
+            content: string;
+            /**
+             * Duplicate Strategy
+             * @default skip
+             * @enum {string}
+             */
+            duplicate_strategy: "skip" | "update";
+            /** @description Omit to use the suggested mapping. */
+            mapping?: components["schemas"]["ImportMapping"] | null;
+        };
+        /** ImportRequest */
+        ImportRequest: {
+            /** Content */
+            content: string;
+            /**
+             * Duplicate Strategy
+             * @default skip
+             * @enum {string}
+             */
+            duplicate_strategy: "skip" | "update";
+            /**
+             * Filename
+             * @default import.csv
+             */
+            filename: string;
+            mapping: components["schemas"]["ImportMapping"];
+        };
+        /** ImportRowPreview */
+        ImportRowPreview: {
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "create" | "update" | "skip_duplicate" | "error";
+            /** Issues */
+            issues: string[];
+            /** Note */
+            note: string | null;
+            /** Row */
+            row: number;
+            /** Values */
+            values: {
+                [key: string]: string;
+            };
+            /** Warnings */
+            warnings: string[];
+        };
         /** IndustriesStep */
         IndustriesStep: {
             /** Industries */
@@ -638,6 +1656,32 @@ export interface components {
              * @enum {string}
              */
             step: "industries";
+        };
+        /** IndustryCriterion */
+        IndustryCriterion: {
+            /** Avoid */
+            avoid?: string[];
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            key: "industry";
+            /**
+             * Preferred
+             * @description Empty = use the industries in your profile.
+             */
+            preferred?: string[];
+            /**
+             * Weight
+             * @description Relative importance, 1-10.
+             * @default 1
+             */
+            weight: number;
         };
         /**
          * KnowledgeApprove
@@ -772,6 +1816,210 @@ export interface components {
             /** Version */
             version: number;
         };
+        /** LeadCreate */
+        LeadCreate: {
+            /** Budget Signal */
+            budget_signal?: ("low" | "medium" | "high") | null;
+            /** Company Id */
+            company_id?: string | null;
+            /** Company Name */
+            company_name?: string | null;
+            /** Company Website */
+            company_website?: string | null;
+            /** Contact Email */
+            contact_email?: string | null;
+            /** Contact Id */
+            contact_id?: string | null;
+            /** Contact Name */
+            contact_name?: string | null;
+            /** Industry */
+            industry?: string | null;
+            /** Location */
+            location?: string | null;
+            /** Next Action */
+            next_action?: string | null;
+            /** Next Action At */
+            next_action_at?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /** Source */
+            source?: string | null;
+            /**
+             * Status
+             * @default new
+             * @enum {string}
+             */
+            status: "new" | "contacted" | "replied" | "qualified" | "nurturing" | "won" | "lost";
+            /** Tag Ids */
+            tag_ids?: string[];
+            /** Title */
+            title: string;
+        };
+        /** LeadDetail */
+        LeadDetail: {
+            /** Archived At */
+            archived_at: string | null;
+            /** Budget Signal */
+            budget_signal: string | null;
+            company: components["schemas"]["CompanyRef"] | null;
+            contact: components["schemas"]["ContactRef"] | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Do Not Contact */
+            do_not_contact: boolean;
+            /**
+             * Fit Band
+             * @description strong | possible | weak | insufficient. Null = never scored.
+             */
+            fit_band: string | null;
+            /** @description Score breakdown with evidence. Null when never scored. */
+            fit_explanation: components["schemas"]["FitExplanation"] | null;
+            /**
+             * Fit Score
+             * @description 0-100, rounded to the nearest 5. Null = not enough information.
+             */
+            fit_score: number | null;
+            /** Fit Scored At */
+            fit_scored_at: string | null;
+            /**
+             * Fit Stale
+             * @description True when the criteria or profile changed since this score was computed.
+             */
+            fit_stale: boolean;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Industry */
+            industry: string | null;
+            /** Is Sample */
+            is_sample: boolean;
+            /** Last Activity At */
+            last_activity_at: string | null;
+            /** Location */
+            location: string | null;
+            /** Next Action */
+            next_action: string | null;
+            /** Next Action At */
+            next_action_at: string | null;
+            /** Notes */
+            notes: string | null;
+            /** Source */
+            source: string | null;
+            /** Source Retrieved At */
+            source_retrieved_at: string | null;
+            stage: components["schemas"]["StageRef"] | null;
+            /** Status */
+            status: string;
+            /** Tags */
+            tags: components["schemas"]["TagRef"][];
+            /** Title */
+            title: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** LeadOut */
+        LeadOut: {
+            /** Archived At */
+            archived_at: string | null;
+            /** Budget Signal */
+            budget_signal: string | null;
+            company: components["schemas"]["CompanyRef"] | null;
+            contact: components["schemas"]["ContactRef"] | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Do Not Contact */
+            do_not_contact: boolean;
+            /**
+             * Fit Band
+             * @description strong | possible | weak | insufficient. Null = never scored.
+             */
+            fit_band: string | null;
+            /**
+             * Fit Score
+             * @description 0-100, rounded to the nearest 5. Null = not enough information.
+             */
+            fit_score: number | null;
+            /** Fit Scored At */
+            fit_scored_at: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Industry */
+            industry: string | null;
+            /** Is Sample */
+            is_sample: boolean;
+            /** Last Activity At */
+            last_activity_at: string | null;
+            /** Location */
+            location: string | null;
+            /** Next Action */
+            next_action: string | null;
+            /** Next Action At */
+            next_action_at: string | null;
+            /** Notes */
+            notes: string | null;
+            /** Source */
+            source: string | null;
+            /** Source Retrieved At */
+            source_retrieved_at: string | null;
+            stage: components["schemas"]["StageRef"] | null;
+            /** Status */
+            status: string;
+            /** Tags */
+            tags: components["schemas"]["TagRef"][];
+            /** Title */
+            title: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** LeadPatch */
+        LeadPatch: {
+            /** Budget Signal */
+            budget_signal?: ("low" | "medium" | "high") | null;
+            /** Company Id */
+            company_id?: string | null;
+            /** Contact Id */
+            contact_id?: string | null;
+            /** Industry */
+            industry?: string | null;
+            /** Location */
+            location?: string | null;
+            /** Next Action */
+            next_action?: string | null;
+            /** Next Action At */
+            next_action_at?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /** Source */
+            source?: string | null;
+            /** Stage Id */
+            stage_id?: string | null;
+            /** Status */
+            status?: ("new" | "contacted" | "replied" | "qualified" | "nurturing" | "won" | "lost") | null;
+            /** Title */
+            title?: string | null;
+        };
+        /** LeadTagsPut */
+        LeadTagsPut: {
+            /** Tag Ids */
+            tag_ids: string[];
+        };
         /** MeResponse */
         MeResponse: {
             user: components["schemas"]["UserOut"];
@@ -809,10 +2057,65 @@ export interface components {
             /** Total Count */
             total_count: number;
         };
+        /** Page[ActivityOut] */
+        Page_ActivityOut_: {
+            /** Items */
+            items: components["schemas"]["ActivityOut"][];
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+            /** Total */
+            total: number;
+        };
+        /** Page[CompanyOut] */
+        Page_CompanyOut_: {
+            /** Items */
+            items: components["schemas"]["CompanyOut"][];
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+            /** Total */
+            total: number;
+        };
+        /** Page[ContactOut] */
+        Page_ContactOut_: {
+            /** Items */
+            items: components["schemas"]["ContactOut"][];
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+            /** Total */
+            total: number;
+        };
+        /** Page[ImportJobOut] */
+        Page_ImportJobOut_: {
+            /** Items */
+            items: components["schemas"]["ImportJobOut"][];
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+            /** Total */
+            total: number;
+        };
         /** Page[KnowledgeOut] */
         Page_KnowledgeOut_: {
             /** Items */
             items: components["schemas"]["KnowledgeOut"][];
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+            /** Total */
+            total: number;
+        };
+        /** Page[LeadOut] */
+        Page_LeadOut_: {
+            /** Items */
+            items: components["schemas"]["LeadOut"][];
             /** Limit */
             limit: number;
             /** Offset */
@@ -1040,6 +2343,11 @@ export interface components {
              */
             status: "ready" | "not_ready";
         };
+        /** RescoreResult */
+        RescoreResult: {
+            /** Rescored */
+            rescored: number;
+        };
         /** RoleStep */
         RoleStep: {
             /** Role Title */
@@ -1054,6 +2362,30 @@ export interface components {
              * @default
              */
             summary: string;
+        };
+        /** ServiceMatchCriterion */
+        ServiceMatchCriterion: {
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            key: "service_match";
+            /**
+             * Keywords
+             * @description Extra words that signal a project you want, besides your profile's services.
+             */
+            keywords?: string[];
+            /**
+             * Weight
+             * @description Relative importance, 1-10.
+             * @default 1
+             */
+            weight: number;
         };
         /** ServicesStep */
         ServicesStep: {
@@ -1093,6 +2425,18 @@ export interface components {
              * @enum {string}
              */
             step: "skills";
+        };
+        /** StageRef */
+        StageRef: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Key */
+            key: string;
+            /** Name */
+            name: string;
         };
         /** StepStatus */
         StepStatus: {
@@ -1140,6 +2484,18 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /** TagRef */
+        TagRef: {
+            /** Color */
+            color: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
         };
         /**
          * TagUpdate
@@ -1626,6 +2982,859 @@ export interface operations {
             };
         };
     };
+    list_companies_api_v1_workspaces__workspace_id__companies_get: {
+        parameters: {
+            query?: {
+                /** @description Name or website contains. */
+                q?: string | null;
+                industry?: string | null;
+                size_label?: ("1" | "2-10" | "11-50" | "51-200" | "201-1000" | "1000+") | null;
+                archived?: "active" | "archived" | "all";
+                sample?: ("only" | "exclude") | null;
+                /** @description Page size (1-100). */
+                limit?: number;
+                /** @description Rows to skip. */
+                offset?: number;
+                /** @description Comma-separated fields; prefix '-' for descending. */
+                sort?: string | null;
+            };
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_CompanyOut_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_company_api_v1_workspaces__workspace_id__companies_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompanyCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_company_api_v1_workspaces__workspace_id__companies__company_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                company_id: string;
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    update_company_api_v1_workspaces__workspace_id__companies__company_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                company_id: string;
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompanyPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    archive_company_api_v1_workspaces__workspace_id__companies__company_id__archive_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                company_id: string;
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    restore_company_api_v1_workspaces__workspace_id__companies__company_id__restore_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                company_id: string;
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_contacts_api_v1_workspaces__workspace_id__contacts_get: {
+        parameters: {
+            query?: {
+                /** @description Name, email or role contains. */
+                q?: string | null;
+                company_id?: string | null;
+                archived?: "active" | "archived" | "all";
+                sample?: ("only" | "exclude") | null;
+                /** @description Page size (1-100). */
+                limit?: number;
+                /** @description Rows to skip. */
+                offset?: number;
+                /** @description Comma-separated fields; prefix '-' for descending. */
+                sort?: string | null;
+            };
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_ContactOut_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_contact_api_v1_workspaces__workspace_id__contacts_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_contact_api_v1_workspaces__workspace_id__contacts__contact_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: string;
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    update_contact_api_v1_workspaces__workspace_id__contacts__contact_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: string;
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    archive_contact_api_v1_workspaces__workspace_id__contacts__contact_id__archive_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: string;
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    restore_contact_api_v1_workspaces__workspace_id__contacts__contact_id__restore_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: string;
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     set_demo_mode_api_v1_workspaces__workspace_id__demo_mode_put: {
         parameters: {
             query?: never;
@@ -1652,6 +3861,563 @@ export interface operations {
             };
             /** @description Unauthorized */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_config_api_v1_workspaces__workspace_id__fit_scoring_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FitConfigOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    put_config_api_v1_workspaces__workspace_id__fit_scoring_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FitConfigIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FitConfigOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    rescore_api_v1_workspaces__workspace_id__fit_scoring_rescore_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RescoreResult"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_imports_api_v1_workspaces__workspace_id__imports_get: {
+        parameters: {
+            query?: {
+                /** @description Page size (1-100). */
+                limit?: number;
+                /** @description Rows to skip. */
+                offset?: number;
+                /** @description Comma-separated fields; prefix '-' for descending. */
+                sort?: string | null;
+            };
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_ImportJobOut_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    run_import_api_v1_workspaces__workspace_id__imports_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ImportRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportJobOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    preview_api_v1_workspaces__workspace_id__imports_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ImportPreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportPreview"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_import_api_v1_workspaces__workspace_id__imports__job_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportJobOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    error_report_api_v1_workspaces__workspace_id__imports__job_id__errors_csv_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description CSV file */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2346,6 +5112,890 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["KnowledgeVersionOut"][];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_leads_api_v1_workspaces__workspace_id__leads_get: {
+        parameters: {
+            query?: {
+                /** @description Page size (1-100). */
+                limit?: number;
+                /** @description Rows to skip. */
+                offset?: number;
+                /** @description Comma-separated fields; prefix '-' for descending. */
+                sort?: string | null;
+                /** @description Title, notes, company or contact contains. */
+                q?: string | null;
+                /** @description One or more statuses. */
+                status?: ("new" | "contacted" | "replied" | "qualified" | "nurturing" | "won" | "lost")[] | null;
+                stage_id?: string | null;
+                tag_id?: string | null;
+                company_id?: string | null;
+                contact_id?: string | null;
+                source?: string | null;
+                /** @description Industry contains. */
+                industry?: string | null;
+                /** @description strong >= 70, possible 45-69, weak < 45, unscored = no score yet. */
+                fit?: ("strong" | "possible" | "weak" | "unscored") | null;
+                archived?: "active" | "archived" | "all";
+                sample?: ("only" | "exclude") | null;
+                /** @description Next action is past due. */
+                overdue?: boolean | null;
+                has_next_action?: boolean | null;
+            };
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_LeadOut_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_lead_api_v1_workspaces__workspace_id__leads_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LeadCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeadDetail"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    bulk_tag_api_v1_workspaces__workspace_id__leads_bulk_tags_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkTagRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkTagResult"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    export_leads_api_v1_workspaces__workspace_id__leads_export_get: {
+        parameters: {
+            query?: {
+                sort?: string | null;
+                /** @description Title, notes, company or contact contains. */
+                q?: string | null;
+                /** @description One or more statuses. */
+                status?: ("new" | "contacted" | "replied" | "qualified" | "nurturing" | "won" | "lost")[] | null;
+                stage_id?: string | null;
+                tag_id?: string | null;
+                company_id?: string | null;
+                contact_id?: string | null;
+                source?: string | null;
+                /** @description Industry contains. */
+                industry?: string | null;
+                /** @description strong >= 70, possible 45-69, weak < 45, unscored = no score yet. */
+                fit?: ("strong" | "possible" | "weak" | "unscored") | null;
+                archived?: "active" | "archived" | "all";
+                sample?: ("only" | "exclude") | null;
+                /** @description Next action is past due. */
+                overdue?: boolean | null;
+                has_next_action?: boolean | null;
+            };
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description CSV file */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_lead_api_v1_workspaces__workspace_id__leads__lead_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                lead_id: string;
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeadDetail"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    update_lead_api_v1_workspaces__workspace_id__leads__lead_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                lead_id: string;
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LeadPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeadDetail"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_activities_api_v1_workspaces__workspace_id__leads__lead_id__activities_get: {
+        parameters: {
+            query?: {
+                /** @description Page size (1-100). */
+                limit?: number;
+                /** @description Rows to skip. */
+                offset?: number;
+                /** @description Comma-separated fields; prefix '-' for descending. */
+                sort?: string | null;
+            };
+            header?: never;
+            path: {
+                lead_id: string;
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_ActivityOut_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    add_activity_api_v1_workspaces__workspace_id__leads__lead_id__activities_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                lead_id: string;
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ActivityCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    archive_lead_api_v1_workspaces__workspace_id__leads__lead_id__archive_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                lead_id: string;
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeadDetail"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    restore_lead_api_v1_workspaces__workspace_id__leads__lead_id__restore_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                lead_id: string;
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeadDetail"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    rescore_lead_api_v1_workspaces__workspace_id__leads__lead_id__score_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                lead_id: string;
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeadDetail"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    put_tags_api_v1_workspaces__workspace_id__leads__lead_id__tags_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                lead_id: string;
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LeadTagsPut"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeadDetail"];
                 };
             };
             /** @description Unauthorized */

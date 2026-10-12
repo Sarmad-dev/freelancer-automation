@@ -27,6 +27,12 @@ ALLOWED_DETAIL_KEYS = frozenset(
         "version",
         "count",
         "kind",
+        # Counts and modes only (MVP Prompt 6).
+        "created",
+        "updated",
+        "skipped",
+        "errors",
+        "strategy",
     }
 )
 

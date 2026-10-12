@@ -23,6 +23,7 @@ const FORWARD_RESPONSE_HEADERS = [
   "retry-after",
   "x-request-id",
   "cache-control",
+  "content-disposition", // lets CSV exports and error reports download with their filename
 ] as const;
 
 const ALLOWED_PREFIXES = ["auth", "workspaces"] as const;

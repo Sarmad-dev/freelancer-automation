@@ -49,6 +49,8 @@ REQUIRED = {
     "notifications",
     "audit_events",
     "credential_secrets",
+    "fit_scoring_configs",
+    "import_jobs",
 }
 
 # Intentional exceptions, each justified.
@@ -205,6 +207,7 @@ def test_status_like_columns_are_guarded_by_check_constraints() -> None:
         "messages": "delivery_state",
         "suppression_entries": "reason",
         "knowledge_items": "status",
+        "import_jobs": "status",
         "workflows": "status",
     }
     for table, column in expected.items():

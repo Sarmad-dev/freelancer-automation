@@ -130,3 +130,24 @@ case studies, client names, certifications or outcomes. When extraction by a mod
 Zero-width and bidi-control characters (except ZWNJ/ZWJ, needed in some scripts) are removed and control characters rejected
 in all user text, so an approved fact cannot hide content from the reviewer ("what you approve is what the AI reads").
 
+## D30 — Fit scoring is rule-based and explainable, with no model involved
+A freelancer can check and tune a rule; they cannot check a model's hunch. Five criteria (service match, industry, geography, company size, budget) look only at data the user entered, produce match / partial / miss / unknown with the evidence that decided it, and combine by user-set weights. It works with no AI provider. A model may later *propose* evidence, but the score stays a function of recorded, citable facts.
+
+## D31 — Unknown is not a miss, and too little data means no number
+Criteria without data are left out of the maths; the score is rounded to the nearest 5; below half of the weighting (or fewer than two known criteria) the lead is "not enough information" with no score. A lead that mentions a client type the user excluded is capped at 25 and says so. This avoids false precision: "0" would otherwise mean "we know nothing".
+
+## D32 — An import preview is the real import, rolled back
+The preview runs the same code as the import inside the request's transaction and rolls it back, so what the wizard says will happen (creates, updates, skipped duplicates, row errors, do-not-contact warnings) is exactly what happens. The cost is that a preview of a large file does the work twice; files are capped at 5,000 rows.
+
+## D33 — Duplicate rules are explicit and shared by every path
+A contact is identified by normalised email (unique per workspace, enforced by the database); a company by website domain, then by exact case-insensitive name unless the websites differ; an email-less lead by (title, company). Manual entry, API and CSV import all go through the same find-or-create code. The import offers `skip` (default) or `update` (fill from non-empty cells, never blank, add tags, never remove).
+
+## D34 — CSV safety and limits
+Files are UTF-8 text up to 2 MB / 5,000 rows / 60 columns; unclosed quotes, stray characters after a closing quote, extra values in a row and duplicate headers are rejected or reported rather than guessed at. Every CSV the app writes (export, error report) prefixes cells that start with `= + - @` (except phone-number shapes) so a spreadsheet cannot run them. The import is synchronous: simple, atomic and fast enough at this size; larger files wait for the job runner (Prompt 11).
+
+## D35 — Lists sort case-insensitively with NULLs last
+SQLite and PostgreSQL disagree about NULL order and PostgreSQL's collation depends on the server, so name/title sorts use `lower(...)` and every sort puts NULLs last. Without it, "unscored" leads would float to the top on one database and the bottom on the other.
+
+## D36 — Export is owner-only and counted
+A lead export is bulk personal data leaving the app, so it requires the owner role, refuses more than 10,000 rows instead of silently truncating, and is audited with a count (never the content).
+

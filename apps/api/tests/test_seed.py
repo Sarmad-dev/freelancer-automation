@@ -82,10 +82,19 @@ def test_seed_content_is_realistic_and_internally_consistent(
     db: DbSession, demo: uuid.UUID
 ) -> None:
     leads = db.scalars(select(Lead).where(Lead.workspace_id == demo)).all()
-    assert len(leads) == 4 and all(
-        0 <= (ld.fit_score or 0) <= 100 and ld.fit_explanation for ld in leads
-    )
+    assert len(leads) == 5 and all(ld.fit_explanation for ld in leads)
+    assert all(ld.fit_score is None or 0 <= ld.fit_score <= 100 for ld in leads)
     assert {ld.status for ld in leads} >= {"new", "replied", "qualified"}
+    # Scores come from the real rules and show the whole range, including "not enough information".
+    bands = {ld.fit_explanation["band"] for ld in leads}  # type: ignore[index]
+    assert bands == {"strong", "weak", "insufficient"}
+    by_title = {ld.title: ld for ld in leads}
+    inbound = by_title["Inbound inquiry (fictional)"]
+    assert inbound.fit_score is None and inbound.fit_explanation["band"] == "insufficient"  # type: ignore[index]
+    gambling = by_title["Tailspin Co (fictional) website rebuild"]
+    assert gambling.fit_explanation["capped"] is True and gambling.fit_score == 25  # type: ignore[index]
+    assert all(ld.fit_explanation["config_version"] == 1 for ld in leads)  # type: ignore[index]
+    assert all(ld.is_sample and ld.source == "seed" for ld in leads)
     # The pending approval is bound to the exact draft content (approval must be re-requested if it changes).
     approval = db.scalar(select(ApprovalRequest).where(ApprovalRequest.workspace_id == demo))
     draft = db.get(Draft, approval.draft_id)  # type: ignore[union-attr]

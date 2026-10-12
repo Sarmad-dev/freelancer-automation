@@ -55,6 +55,7 @@ describe("header filtering", () => {
     const upstream = new Headers({
       "content-type": "application/json",
       "retry-after": "30",
+      "content-disposition": 'attachment; filename="leads.csv"',
       "x-powered-by": "x",
     });
     upstream.append("set-cookie", "a=1; Path=/; HttpOnly");
@@ -63,6 +64,7 @@ describe("header filtering", () => {
     expect(out.getSetCookie()).toEqual(["a=1; Path=/; HttpOnly", "b=2; Path=/; HttpOnly"]);
     expect(out.get("cache-control")).toBe("no-store");
     expect(out.get("retry-after")).toBe("30");
+    expect(out.get("content-disposition")).toBe('attachment; filename="leads.csv"');
     expect(out.has("x-powered-by")).toBe(false);
   });
 });

@@ -1,6 +1,68 @@
 # Implementation status
 
-_Last updated: MVP Prompt 5 (freelancer profile and approved knowledge)._
+_Last updated: MVP Prompt 6 (leads, contacts, companies, CSV import and fit scoring)._
+
+## Completed — MVP Prompt 6: leads, contacts, companies, CSV import and fit scoring
+- **API** (owner writes, members read; all workspace-scoped; see [API_CONVENTIONS.md](API_CONVENTIONS.md)):
+  `companies`, `contacts` and `leads` list/detail/create/edit/archive/restore with search, filters, sorting and pagination;
+  lead tags (replace) and bulk tagging; activity timeline with notes, calls and meetings; lead status linked to the pipeline
+  stage; `GET /leads/export` (CSV); `fit-scoring` criteria (get/save/recompute) and per-lead recompute; the CSV `imports`
+  (preview, import, history, error report).
+- **Fit scoring** (`services/fit_scoring.py`): five user-weighted criteria, rule-based and explainable (D30, D31). Every score
+  stores its evidence, confidence, and the criteria/profile versions it used, so stale scores are flagged. Scores are rounded to
+  the nearest 5; with too little data there is no number; clients the user excluded cap the score at 25.
+- **CSV import** (`services/csvio.py`, `lead_import.py`): upload → map columns → preview → duplicate strategy → import →
+  result and downloadable error report. Strict parsing, size/row/column limits, per-field validation, duplicate detection
+  (D33), provenance (`source`, `source_retrieved_at`), tags created on the fly, do-not-contact flagged. The preview is the
+  real import rolled back (D32). No scraping and no fetching of any kind.
+- **Manual entry stays complete**: a lead needs only a title; companies and contacts can be described inline and are matched
+  to existing records by website, name or email.
+- **Safety:** spreadsheet-formula neutralising in every CSV written, owner-only import/export, export capped and audited,
+  `no-store`/`nosniff` downloads, all text rendered as text, URLs validated server-side and in the browser.
+- **Seed:** five fictional leads scored by the real rules (strong, weak-and-capped, and "not enough information"), saved
+  criteria, a sample import record, all flagged as sample data.
+- **Web** (`/leads`): tabs for Leads, Companies, Contacts and Fit scoring; detail pages for each; the import wizard
+  (`/leads/import`). Lists are server-rendered from validated URL parameters (filters, sort and paging are links and a GET form,
+  so they work without JavaScript). Lead detail shows the full score breakdown with evidence, provenance, timeline, tags and
+  status/stage changes. Navigation marks Leads as available.
+- **Migration `0005`**: new tables and columns; clears scores that were never computed (the old hard-coded demo values).
+
+## Verification: MVP Prompt 6
+- API: 849 pytest tests pass on **SQLite, PostgreSQL 16 and Python 3.12/3.13**; ruff and mypy (strict) clean. New: 38 company/
+  contact tests, 75 lead tests (create, inline linking, validation, stage sync, listing filters/sorts, tags, bulk tagging,
+  timeline, export, permissions, isolation), 57 scoring tests (every criterion and outcome, weights, rounding, insufficient
+  data, exclusion cap, config API, stale scores), 90 CSV tests (parser edge cases, formula neutralising, mapping, preview,
+  per-field validation, duplicates inside and across files, both strategies, error report, limits, permissions, isolation),
+  migration 0005 with data on both databases, schema guards for the new tables.
+- Mutation checks (each made tests fail): leads listing without the tenant filter, bulk tagging without the ownership check,
+  export open to members, formula escaping off, unknown counted as a miss, no exclusion cap, no rounding, no email duplicate
+  detection, unscoped company lookup in the importer, preview that commits, edits allowed on archived records.
+  (A preview that merely flushes instead of rolling back is harmless: the request never commits, so it is not a bug.)
+- Web: 365 vitest tests (29 files; every slice has DOM tests with axe, hostile input, member read-only and error mapping).
+  Lint, typecheck, format and production build pass; OpenAPI is identical on Python 3.12 and 3.13.
+- Real browser (Chromium via Playwright): axe (WCAG 2 A/AA incl. contrast, best practice) clean on every leads page (lists,
+  filtered and empty states, both detail pages, scoring, import) at 1440/820/390 px in dark and light themes with no
+  horizontal overflow; end-to-end through the UI and checked in the database: add a lead (invalid email error, then success;
+  `<img onerror>` title stayed inert), search, bulk tag, change status (timeline entry), log a note, archive/restore, change
+  criteria and recalculate, upload a CSV with a bad row and two kinds of duplicate → review → import → download the error
+  report, export CSV (formulas neutralised), duplicate company website refused.
+- Bugs found in the browser and fixed: the lead page asked the API for contacts sorted by an invalid field and therefore never
+  loaded (unit tests with stubbed responses could not see it); a visually hidden table header escaping its scroll box (Prompt 5).
+  Found by the tests: unscored leads sorted differently on SQLite and PostgreSQL, and name sorts depended on the database's
+  collation (now NULLs-last and case-insensitive everywhere).
+
+## Not verified / known gaps (Prompt 6)
+- **Saved views** (optional in the playbook) are not built; filters are shareable URLs instead.
+- Enrichment from approved sources is not implemented; the provenance columns it will use are in place.
+- CSV files must be UTF-8; other encodings are not detected. Import is synchronous (5,000 rows max) with a result screen
+  rather than a live progress bar; larger files wait for the job runner (Prompt 11).
+- Scoring matches words with light stemming; it cannot understand meaning (the UI says so and offers keywords). Geography is
+  text matching, not distance.
+- Link pickers on forms list the first 100 companies/contacts (no typeahead endpoint yet); edits to leads, companies and
+  contacts are last-write-wins (no version check).
+- Do-not-contact is displayed and imported; enforcing it on send belongs to the email prompts.
+- No bulk actions beyond tagging (archive, status change and delete in bulk come with the pipeline work).
+- Member access (read-only) is covered by API and DOM tests, not by a browser session.
 
 ## Completed — MVP Prompt 5: freelancer profile and approved knowledge
 - **API (owner writes, members read; all workspace-scoped):** `GET/PATCH /profile` (optimistic `expected_version`),
@@ -182,7 +244,7 @@ JS: lint, typecheck, vitest (workflow-core 8, ui 5, contracts 1, web 5), `next b
 - No authentication, tenancy, business entities, worker or queue (later phases). 
 
 ## Next
-MVP Prompt 6 — leads (see the playbook).
+MVP Prompt 7 — pipeline, tasks and activity timeline (see the playbook).
 
 ## Commands
 See the README. Migrations: `pnpm db:migrate`, rollback one step: `pnpm db:downgrade`.

@@ -47,6 +47,28 @@ def bounded(min_len: int, max_len: int, *, multiline: bool = False) -> AfterVali
     return AfterValidator(_validate)
 
 
+def optional_text(max_len: int, *, multiline: bool = False) -> AfterValidator:
+    """Optional free text: blank becomes ``None`` (clears the field), otherwise cleaned and length-checked."""
+
+    def _validate(value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = multi_line(value) if multiline else single_line(value)
+        if not cleaned:
+            return None
+        if len(cleaned) > max_len:
+            raise ValueError(f"Use at most {max_len} characters.")
+        return cleaned
+
+    return AfterValidator(_validate)
+
+
+OptLine100 = Annotated[str | None, optional_text(100)]
+OptLine120 = Annotated[str | None, optional_text(120)]
+OptLine200 = Annotated[str | None, optional_text(200)]
+OptLine300 = Annotated[str | None, optional_text(300)]
+OptNotes = Annotated[str | None, optional_text(4000, multiline=True)]
+
 Name = Annotated[str, bounded(1, 120)]
 
 

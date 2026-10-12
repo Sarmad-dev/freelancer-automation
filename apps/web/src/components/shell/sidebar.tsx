@@ -16,16 +16,16 @@ import {
   cn,
 } from "@freelancer-os/ui";
 import { NAV_ITEMS, isActivePath } from "@/config/navigation";
-
-export const WORKSPACE_NAME = "Personal workspace";
+import { useSession } from "@/components/session-provider";
 
 function WorkspaceSwitcher({ collapsed }: { collapsed: boolean }) {
+  const { workspace } = useSession();
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          aria-label={`Workspace: ${WORKSPACE_NAME}`}
+          aria-label={`Workspace: ${workspace.name}`}
           className={cn(
             "flex w-full items-center gap-3 rounded-md border border-line bg-surface p-2 text-left hover:bg-elevated",
             collapsed && "justify-center",
@@ -40,8 +40,10 @@ function WorkspaceSwitcher({ collapsed }: { collapsed: boolean }) {
           {collapsed ? null : (
             <>
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-medium text-fg">{WORKSPACE_NAME}</span>
-                <span className="block truncate text-xs text-muted">Free · Owner</span>
+                <span className="block truncate text-sm font-medium text-fg">{workspace.name}</span>
+                <span className="block truncate text-xs text-muted capitalize">
+                  {workspace.role}
+                </span>
               </span>
               <ChevronsUpDown className="size-4 shrink-0 text-muted" aria-hidden />
             </>
@@ -52,7 +54,7 @@ function WorkspaceSwitcher({ collapsed }: { collapsed: boolean }) {
         <DropdownMenuLabel>Workspaces</DropdownMenuLabel>
         <DropdownMenuItem>
           <Check className="size-4 text-accent" aria-hidden />
-          {WORKSPACE_NAME}
+          {workspace.name}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem disabled>Create workspace (coming later)</DropdownMenuItem>
@@ -71,6 +73,7 @@ export function SidebarContent({
   onToggleCollapsed?: () => void;
 }) {
   const pathname = usePathname();
+  const { workspace } = useSession();
   return (
     <div className="flex h-full flex-col gap-4 p-3">
       <WorkspaceSwitcher collapsed={collapsed} />
@@ -129,7 +132,7 @@ export function SidebarContent({
           <dl className="flex flex-col gap-1.5">
             <div className="flex justify-between gap-2">
               <dt className="text-muted">Mode</dt>
-              <dd className="text-fg">Development</dd>
+              <dd className="text-fg">{workspace.demo_mode ? "Demo" : "Standard"}</dd>
             </div>
             <div className="flex justify-between gap-2">
               <dt className="text-muted">Integrations</dt>

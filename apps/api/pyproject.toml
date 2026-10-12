@@ -12,6 +12,8 @@ dependencies = [
   "alembic>=1.14",
   "psycopg[binary]>=3.2",
   "redis>=5.2",
+  "argon2-cffi>=25.1.0",
+  "email-validator>=2.3.0",
 ]
 
 [dependency-groups]
@@ -36,6 +38,8 @@ extend-exclude = ["alembic/versions"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
+# Line length is enforced by `ruff format`; long comments/strings are tolerated.
+ignore = ["E501"]
 
 [tool.mypy]
 python_version = "3.12"

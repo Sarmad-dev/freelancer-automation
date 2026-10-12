@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, CircleHelp, LogIn, Menu, Monitor, Moon, Search, Sun, User } from "lucide-react";
+import { Bell, CircleHelp, Menu, Monitor, Moon, Search, Sun, User } from "lucide-react";
 import {
   Breadcrumbs,
   Button,
@@ -16,7 +16,11 @@ import {
   DropdownMenuTrigger,
   isThemePreference,
 } from "@freelancer-os/ui";
+import { LogOut } from "lucide-react";
 import { resolveBreadcrumbs } from "@/config/navigation";
+import { useSession } from "@/components/session-provider";
+import { browserApi } from "@/lib/api-client";
+import { hardNavigate } from "@/lib/navigation";
 import { useTheme } from "./theme-provider";
 
 const iconBtn = "text-muted hover:text-fg";
@@ -93,6 +97,17 @@ function HelpMenu() {
 }
 
 function ProfileMenu() {
+  const { user } = useSession();
+
+  async function signOut() {
+    try {
+      await browserApi().POST("/api/v1/auth/sign-out");
+    } finally {
+      // Even if the request failed, leave the app: the server session expires on its own.
+      hardNavigate("/sign-in");
+    }
+  }
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -100,16 +115,17 @@ function ProfileMenu() {
           <User className="size-4" aria-hidden />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent>
-        <DropdownMenuLabel>Not signed in</DropdownMenuLabel>
-        <DropdownMenuItem asChild>
-          <Link href="/sign-in">
-            <LogIn className="size-4" aria-hidden /> Sign in
-          </Link>
-        </DropdownMenuItem>
+      <DropdownMenuContent className="w-64">
+        <DropdownMenuLabel>
+          <span className="block truncate text-sm font-medium text-fg">{user.display_name}</span>
+          <span className="block truncate text-xs font-normal text-muted">{user.email}</span>
+        </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <Link href="/settings">Settings</Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => void signOut()}>
+          <LogOut className="size-4" aria-hidden /> Sign out
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

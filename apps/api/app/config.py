@@ -34,6 +34,29 @@ class Settings(BaseSettings):
     app_secret_key: str = Field(default="", alias="APP_SECRET_KEY")
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
 
+    # --- Authentication / sessions ---
+    # Public URL of the web app (used in password-reset links).
+    web_base_url: str = Field(default="http://localhost:3000", alias="WEB_BASE_URL")
+    # None = Secure cookies in production only (browsers reject Secure cookies on plain http).
+    cookie_secure: bool | None = Field(default=None, alias="COOKIE_SECURE")
+    session_idle_timeout_minutes: int = Field(
+        default=60 * 24 * 7, ge=5, alias="SESSION_IDLE_TIMEOUT_MINUTES"
+    )
+    session_absolute_timeout_days: int = Field(
+        default=30, ge=1, alias="SESSION_ABSOLUTE_TIMEOUT_DAYS"
+    )
+    password_reset_ttl_minutes: int = Field(
+        default=60, ge=5, le=1440, alias="PASSWORD_RESET_TTL_MINUTES"
+    )
+    # Number of trusted reverse proxies in front of the API (0 = use the direct peer address).
+    trusted_proxy_count: int = Field(default=0, ge=0, le=5, alias="TRUSTED_PROXY_COUNT")
+    # None = redis in production, in-memory otherwise.
+    rate_limit_backend: Literal["memory", "redis"] | None = Field(
+        default=None, alias="RATE_LIMIT_BACKEND"
+    )
+    # "console" prints reset links (development only). "disabled" turns password reset off.
+    mail_backend: Literal["console", "disabled"] | None = Field(default=None, alias="MAIL_BACKEND")
+
     @field_validator("database_url")
     @classmethod
     def _check_database_url(cls, value: str) -> str:
@@ -65,7 +88,27 @@ class Settings(BaseSettings):
                 )
             if "*" in self.cors_origins:
                 raise ValueError("CORS_ALLOWED_ORIGINS must not contain '*' in production")
+            if self.cookie_secure is False:
+                raise ValueError("COOKIE_SECURE must not be false in production")
+            if self.effective_mail_backend == "console":
+                raise ValueError("MAIL_BACKEND=console is for development only")
+            if self.effective_rate_limit_backend == "memory":
+                raise ValueError(
+                    "RATE_LIMIT_BACKEND=memory is not allowed in production (use redis)"
+                )
         return self
+
+    @property
+    def secure_cookies(self) -> bool:
+        return self.app_env == "production" if self.cookie_secure is None else self.cookie_secure
+
+    @property
+    def effective_rate_limit_backend(self) -> str:
+        return self.rate_limit_backend or ("redis" if self.app_env == "production" else "memory")
+
+    @property
+    def effective_mail_backend(self) -> str:
+        return self.mail_backend or ("disabled" if self.app_env == "production" else "console")
 
     @property
     def cors_origins(self) -> list[str]:

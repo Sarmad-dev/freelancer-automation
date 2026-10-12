@@ -4,7 +4,9 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Monitor, Moon, Sun } from "lucide-react";
 import { CommandPalette, Drawer, cn, type CommandGroup } from "@freelancer-os/ui";
+import Link from "next/link";
 import { NAV_ITEMS } from "@/config/navigation";
+import { useSession } from "@/components/session-provider";
 import { SidebarContent } from "./sidebar";
 import { useTheme } from "./theme-provider";
 import { Topbar } from "./topbar";
@@ -13,6 +15,7 @@ import { usePersistentBoolean } from "./use-persistent-boolean";
 export function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const { setPreference } = useTheme();
+  const { workspace } = useSession();
   const [collapsed, setCollapsed] = usePersistentBoolean("fos-sidebar-collapsed");
   const [navOpen, setNavOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -108,6 +111,24 @@ export function AppShell({ children }: { children: ReactNode }) {
           tabIndex={-1}
           className="mx-auto w-full max-w-7xl px-4 py-6 outline-none md:px-8 md:py-8"
         >
+          {workspace.onboarding_status !== "completed" ? (
+            <div
+              role="region"
+              aria-label="Profile setup"
+              className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line bg-surface p-4 text-sm"
+            >
+              <p className="text-muted">
+                <span className="font-medium text-fg">Finish setting up your profile.</span> Drafts
+                and fit scores use it, and nothing is shared without your approval.
+              </p>
+              <Link
+                href="/onboarding"
+                className="inline-flex h-8 items-center rounded-md border border-line bg-elevated px-3 text-[13px] font-medium text-fg hover:brightness-110"
+              >
+                {workspace.onboarding_status === "not_started" ? "Start setup" : "Continue setup"}
+              </Link>
+            </div>
+          ) : null}
           {children}
         </main>
       </div>

@@ -1,0 +1,123 @@
+# Authentication, sessions and tenancy
+
+_Status: MVP Prompt 3. This documents what is implemented and what is deliberately not yet._
+
+## Where identity lives
+
+**The FastAPI API is the identity and session authority.** There is no external identity provider and no
+JWT. The web app never validates credentials or sessions itself; it asks the API.
+
+| Concern | Owner |
+|---|---|
+| Password hashing, sign-up/in/out, reset | API (`app/routers/auth.py`) |
+| Session issue/validate/expire/revoke | API (`app/deps.py`, `sessions` table) |
+| "Is there a cookie?" redirect shortcut | Web `src/proxy.ts` (UX only, not a security boundary) |
+| Authoritative page gate | Web server components call `GET /api/v1/auth/me` (`src/lib/session.ts`) |
+| Workspace authorisation | API (`get_workspace_context`) on every workspace route |
+
+## Request path
+
+```
+Browser ── same-origin ──► Next.js  /api/v1/*  (route handler, allow-listed proxy)
+                              └──────────────► FastAPI /api/v1/*
+```
+
+The browser only talks to the Next.js origin, so the session cookie is first-party: no CORS, no
+third-party-cookie behaviour, and the API address stays private. The proxy forwards only `auth/*` and
+`workspaces/*`, rejects dot/empty/encoded-slash segments, forwards an allow-list of headers, relays every
+`Set-Cookie`, and forces `Cache-Control: no-store`. Server components call the API directly with the
+forwarded cookie.
+
+## Sessions
+
+- Opaque 256-bit random token in an **HttpOnly, SameSite=Lax, Path=/** cookie. `Secure` and the
+  `__Host-` name prefix are used in production (`COOKIE_SECURE` defaults to on there). Tokens are never in
+  JSON bodies, `localStorage`, `sessionStorage` or page HTML (verified by the browser test).
+- The database stores only `SHA-256(token)`, so a database leak does not yield usable sessions.
+- A new session is issued on every sign-in (no fixation). Sign-out deletes the row server-side, so a
+  replayed cookie fails.
+- **Expiry:** idle timeout (`SESSION_IDLE_TIMEOUT_MINUTES`, default 7 days, measured from `last_seen_at`,
+  refreshed at most every 5 minutes) **and** an absolute cap (`SESSION_ABSOLUTE_TIMEOUT_DAYS`, default 30).
+  Both are enforced server-side. The cookie's Max-Age equals the absolute cap and is not re-issued on activity
+  (server-rendered pages cannot update browser cookies, so a sliding cookie could lapse while the server
+  session was still valid).
+- An expired session returns `401 session_expired`; pages redirect to `/sign-in?reason=expired`, client calls
+  go through `redirectToSignIn`. An unreachable API shows an error state instead of a misleading sign-in bounce.
+
+## Passwords
+
+Argon2id (`argon2-cffi` defaults, re-hashed on sign-in if parameters change). Policy: 12-128 characters,
+no trivially common values, must not contain the email's local part. Sign-in applies only a length cap (to
+bound hashing cost). A dummy hash is verified for unknown accounts so timing does not reveal registration.
+A k-anonymity breached-password check is a planned improvement.
+
+## Password reset
+
+`POST /auth/password-reset/request` always answers `202` (no account enumeration) and is rate limited per
+email and IP. Tokens: 256-bit random, hashed at rest, single use, 60-minute TTL, only the newest link works.
+Confirming a reset revokes **all** sessions for that user. A rejected (weak) new password does not burn the
+token. Delivery goes through `app/mailer.py`:
+
+- `console` (development default) logs the link to the API log. **Never enabled in production** (config
+  validation refuses it).
+- `disabled` (production default until a mail provider exists): the API answers `503
+  password_reset_unavailable`, `GET /auth/config` reports `password_reset_enabled: false`, and the UI hides
+  the "Forgot password?" link.
+
+## Abuse controls
+
+Fixed-window rate limits (`app/ratelimit.py`): sign-in 10 / 15 min per email (reset on success) and 60 / 15 min
+per IP; sign-up 10 / hour per IP; reset request 5 / hour per email and 20 / hour per IP; reset confirm
+30 / hour per IP. `429` carries `Retry-After`. Backend: in-memory (dev/test) or Redis (required in
+production). If Redis is down the limiter fails **open** and logs a warning (availability over strictness; the
+per-account lockout is the primary protection).
+
+Client IP: `X-Forwarded-For` is honoured only for `TRUSTED_PROXY_COUNT` hops (default 0 = direct peer). Behind
+the Next.js proxy and a load balancer, set it correctly or all users share one IP bucket.
+
+## CSRF
+
+Defence in depth on top of SameSite=Lax: every state-changing request must carry an `Origin` on the
+allow-list (`CORS_ALLOWED_ORIGINS`) or, when no Origin is sent, the `X-Requested-With: freelancer-os` header
+(which cross-site forms cannot set). `Origin: null` and foreign origins get `403 csrf_rejected`. This also
+blocks login-CSRF and forced sign-out.
+
+## Tenancy
+
+`User -> Membership(role) -> Workspace`. The MVP only creates one personal workspace with an `owner`
+membership, but the schema supports many workspaces per user and many users per workspace.
+
+- Workspace routes are `/api/v1/workspaces/{workspace_id}/...` and resolve through `get_workspace_context`,
+  which joins on **the signed-in user's membership**. A non-member gets the same `404 workspace_not_found` as a
+  non-existent id (ids cannot be probed). Request bodies reject unknown fields, so a `workspace_id` can never
+  be smuggled in via the body.
+- Service functions take the resolved context and filter every query by `ctx.workspace_id`.
+- Writes additionally call `require_owner` (the pattern for future roles).
+- Tests: `tests/test_onboarding.py::TestWorkspaceIsolation` (read/write/skip/complete/demo with a second
+  real user, indistinguishable 404s, per-workspace profile storage).
+
+## Audit trail
+
+`audit_events` rows are written in the same transaction as the change: `auth.sign_up`, `auth.sign_in`,
+`auth.sign_in_failed`, `auth.sign_in_blocked`, `auth.sign_out`, `auth.password_reset_requested`,
+`auth.password_reset_completed`, `onboarding.step_saved|skipped|completed`, `workspace.demo_mode_changed`.
+`details` is filtered through an allow-list (`app/audit.py`), so passwords, tokens and profile contents cannot
+be stored even by mistake. Failed sign-ins record only a 12-character hash of the email. IP and a truncated
+user-agent are stored; retention/deletion policy is a later governance task.
+
+## Input handling
+
+All input is validated by Pydantic at the API boundary (types, lengths, enums, IANA time zones, control
+characters, whitespace normalisation, `extra="forbid"` on onboarding bodies). Portfolio URLs must be public
+`http(s)` URLs without credentials; localhost, `.local/.internal`, and non-global IPs are rejected so a future
+fetcher cannot be pointed at internal addresses. Text is stored verbatim and must always be rendered as text.
+
+## Known gaps (tracked)
+
+- **No email verification yet** (`email_verified_at` is always null). Consequently sign-up reveals whether an
+  email is already registered (`409 email_in_use`); mitigated by per-IP rate limiting.
+- No MFA / passkeys / social login; no "sign out everywhere" or session list UI.
+- No breached-password check; reset email delivery is not implemented (dev console only).
+- Rate limiter fails open if Redis is unavailable.
+- Security headers on the web app are minimal (nosniff, frame deny, referrer policy); a CSP is part of
+  MVP Prompt 16.

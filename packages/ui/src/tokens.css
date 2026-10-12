@@ -31,13 +31,13 @@
   --fos-text: #14161a;
   --fos-text-muted: #565b66;
   --fos-border: #dcdfe6;
-  --fos-accent: #3f7d0f;
+  --fos-accent: #386f0d;
   --fos-accent-contrast: #ffffff;
-  --fos-success: #15803d;
-  --fos-warning: #92600a;
+  --fos-success: #11693a;
+  --fos-warning: #855608;
   --fos-danger: #b42318;
   --fos-info: #1d4ed8;
-  --fos-focus: #3f7d0f;
+  --fos-focus: #386f0d;
 }
 
 :root {

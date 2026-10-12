@@ -1,32 +1,43 @@
-import type { ButtonHTMLAttributes } from "react";
+import { forwardRef, type ButtonHTMLAttributes } from "react";
 import { cn } from "./cn";
 
-export type ButtonVariant = "primary" | "secondary" | "ghost";
+export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
+export type ButtonSize = "sm" | "md" | "icon";
 
 const variants: Record<ButtonVariant, string> = {
-  primary: "bg-[var(--fos-accent)] text-[var(--fos-accent-contrast)] hover:brightness-110",
-  secondary:
-    "bg-[var(--fos-elevated)] text-[var(--fos-text)] border border-[var(--fos-border)] hover:brightness-110",
-  ghost: "bg-transparent text-[var(--fos-text)] hover:bg-[var(--fos-elevated)]",
+  primary: "bg-accent text-on-accent hover:brightness-110",
+  secondary: "bg-elevated text-fg border border-line hover:brightness-110",
+  ghost: "bg-transparent text-fg hover:bg-elevated",
+  danger: "bg-danger text-canvas hover:brightness-110",
+};
+const sizes: Record<ButtonSize, string> = {
+  sm: "h-8 px-3 text-[13px]",
+  md: "h-9 px-4 text-sm",
+  icon: "size-9 p-0",
 };
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
+  size?: ButtonSize;
 }
 
-export function Button({ variant = "primary", className, type = "button", ...props }: ButtonProps) {
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
+  { variant = "primary", size = "md", className, type = "button", ...props },
+  ref,
+) {
   return (
     <button
+      ref={ref}
       type={type}
       className={cn(
-        "inline-flex h-9 items-center justify-center gap-2 rounded-[var(--fos-radius-md)] px-4 text-sm font-medium",
+        "inline-flex shrink-0 items-center justify-center gap-2 rounded-md font-medium whitespace-nowrap",
         "transition-[filter,background-color] duration-150",
-        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--fos-focus)]",
         "disabled:cursor-not-allowed disabled:opacity-50",
+        sizes[size],
         variants[variant],
         className,
       )}
       {...props}
     />
   );
-}
+});

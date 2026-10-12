@@ -1,22 +1,38 @@
-"""Scaffold-level models.
+"""ORM models.
 
-Business entities (users, workspaces, leads, ...) arrive in later phases
-(MVP Prompt 4). ``AppMetadata`` exists so migrations, seeding and readiness
-checks have something real to exercise.
+Identity and tenancy (MVP Prompt 3): User, Workspace, Membership, Session, PasswordResetToken,
+AuditEvent, FreelancerProfile, OnboardingProgress. The business domain (CRM, email, workflow) lives in
+``models_crm``, ``models_email`` and ``models_workflow`` and is imported below so every table registers
+on one metadata object.
+
+Tenancy: every tenant-owned table carries ``workspace_id``. Membership links users to workspaces with a
+role so organisations can be added later; the MVP only creates ``owner`` memberships.
 """
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+import uuid
+from datetime import datetime
+from typing import Any
 
-from sqlalchemy import DateTime, String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    Uuid,
+)
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.clock import utcnow
 from app.db.base import Base
-
-
-def _utcnow() -> datetime:
-    return datetime.now(UTC)
+from app.db.mixins import Timestamps as _Timestamps
+from app.db.mixins import new_uuid as _uuid
 
 
 class AppMetadata(Base):
@@ -25,5 +41,163 @@ class AppMetadata(Base):
     key: Mapped[str] = mapped_column(String(100), primary_key=True)
     value: Mapped[str] = mapped_column(String(500), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False
     )
+
+
+class User(_Timestamps, Base):
+    __tablename__ = "users"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=_uuid)
+    # Display form as entered; uniqueness is enforced on the normalised (lower-cased) form.
+    email: Mapped[str] = mapped_column(String(254), nullable=False)
+    email_normalized: Mapped[str] = mapped_column(String(254), nullable=False, unique=True)
+    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    display_name: Mapped[str] = mapped_column(String(120), nullable=False)
+    # Email verification is not implemented yet; the column makes the gap explicit and queryable.
+    email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    last_sign_in_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    # passive_deletes: let the database cascade (ON DELETE CASCADE) instead of the ORM nulling child keys.
+    memberships: Mapped[list[Membership]] = relationship(
+        back_populates="user", passive_deletes=True
+    )
+
+
+class Workspace(_Timestamps, Base):
+    __tablename__ = "workspaces"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=_uuid)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    kind: Mapped[str] = mapped_column(String(20), nullable=False, default="personal")
+    timezone: Mapped[str] = mapped_column(String(64), nullable=False, default="UTC")
+    # Demo mode = the user chose to explore with sample data / without connecting real accounts.
+    demo_mode: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+    memberships: Mapped[list[Membership]] = relationship(
+        back_populates="workspace", passive_deletes=True
+    )
+
+
+class Membership(_Timestamps, Base):
+    __tablename__ = "memberships"
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "user_id", name="uq_memberships_workspace_user"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=_uuid)
+    workspace_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    role: Mapped[str] = mapped_column(String(20), nullable=False, default="owner")
+
+    user: Mapped[User] = relationship(back_populates="memberships")
+    workspace: Mapped[Workspace] = relationship(back_populates="memberships")
+
+
+class Session(Base):
+    """Server-side login session. The cookie holds a random token; only its SHA-256 is stored."""
+
+    __tablename__ = "sessions"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=_uuid)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    token_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, nullable=False
+    )
+    last_seen_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, nullable=False
+    )
+    # Hard cap regardless of activity; idle expiry is derived from last_seen_at.
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    user_agent: Mapped[str | None] = mapped_column(String(200))
+
+
+class PasswordResetToken(Base):
+    __tablename__ = "password_reset_tokens"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=_uuid)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    token_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, nullable=False
+    )
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class AuditEvent(Base):
+    """Append-only record of security- and data-relevant actions. Never stores credentials or tokens."""
+
+    __tablename__ = "audit_events"
+    __table_args__ = (Index("ix_audit_events_workspace_created", "workspace_id", "created_at"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=_uuid)
+    workspace_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("workspaces.id", ondelete="SET NULL")
+    )
+    actor_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="SET NULL"), index=True
+    )
+    action: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
+    target_type: Mapped[str | None] = mapped_column(String(60))
+    target_id: Mapped[str | None] = mapped_column(String(64))
+    ip_address: Mapped[str | None] = mapped_column(String(64))
+    user_agent: Mapped[str | None] = mapped_column(String(200))
+    # Allow-listed, non-sensitive details only (see app.audit.record).
+    details: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, nullable=False
+    )
+
+
+class FreelancerProfile(_Timestamps, Base):
+    """The freelancer's business profile. Onboarding fills it; MVP Prompt 5 extends it."""
+
+    __tablename__ = "freelancer_profiles"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=_uuid)
+    workspace_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, unique=True
+    )
+    role_title: Mapped[str | None] = mapped_column(String(120))
+    summary: Mapped[str | None] = mapped_column(String(500))
+    services: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    skills: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    target_clients: Mapped[str | None] = mapped_column(Text)
+    industries: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    portfolio_urls: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    years_experience: Mapped[int | None] = mapped_column(Integer)
+    experience_summary: Mapped[str | None] = mapped_column(String(1000))
+    tone: Mapped[str | None] = mapped_column(String(30))
+    tone_notes: Mapped[str | None] = mapped_column(String(300))
+    business_goal: Mapped[str | None] = mapped_column(String(40))
+    business_goal_notes: Mapped[str | None] = mapped_column(String(300))
+
+
+class OnboardingProgress(_Timestamps, Base):
+    __tablename__ = "onboarding_progress"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=_uuid)
+    workspace_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, unique=True
+    )
+    # not_started | in_progress | skipped | completed
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="not_started")
+    current_step: Mapped[str] = mapped_column(String(30), nullable=False, default="role")
+    completed_steps: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+# Register the remaining domain tables (import side effect). Keep at the bottom: they reference
+# ``workspaces`` and ``users`` above by name.
+from app.db import models_crm, models_email, models_workflow  # noqa: E402,F401

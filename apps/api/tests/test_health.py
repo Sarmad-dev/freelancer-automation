@@ -50,3 +50,8 @@ def test_ready_returns_503_without_leaking_details(client: TestClient) -> None:
 def test_openapi_lists_health_routes(client: TestClient) -> None:
     paths = client.get("/openapi.json").json()["paths"]
     assert "/health" in paths and "/ready" in paths
+
+
+def test_openapi_is_independent_of_the_python_version(client: TestClient) -> None:
+    """Python 3.12 and 3.13 name HTTP 422 differently; the contract must not depend on it."""
+    assert "Unprocessable Entity" not in client.get("/openapi.json").text

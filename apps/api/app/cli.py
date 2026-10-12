@@ -1,7 +1,7 @@
 """Operational commands: ``python -m app.cli <command>``.
 
 Commands
-- ``seed``            Insert idempotent development seed data (refuses to run in production).
+- ``seed``            Insert idempotent development seed data (development/test only).
 - ``export-openapi``  Write the OpenAPI document used to generate frontend types.
 """
 
@@ -17,14 +17,18 @@ from sqlalchemy import select
 from app.config import ConfigError, get_settings
 from app.db.models import AppMetadata
 from app.db.session import get_sessionmaker
+from app.seed import DEMO_EMAIL, DEMO_PASSWORD, seed_demo
 
 SEED_MARKER_KEY = "seed.scaffold"
 
 
 def seed() -> int:
     settings = get_settings()
-    if settings.app_env == "production":
-        print("Refusing to seed: APP_ENV=production.", file=sys.stderr)
+    if settings.app_env not in ("development", "test"):
+        print(
+            f"Refusing to seed: APP_ENV={settings.app_env} (development/test only).",
+            file=sys.stderr,
+        )
         return 1
     with get_sessionmaker()() as session:
         existing = session.scalar(select(AppMetadata).where(AppMetadata.key == SEED_MARKER_KEY))
@@ -34,6 +38,14 @@ def seed() -> int:
             print("Seed applied.")
         else:
             print("Seed already applied; nothing to do.")
+        created, _workspace_id = seed_demo(session)
+        session.commit()
+        if created:
+            print(
+                f"Demo data created. Sign in as {DEMO_EMAIL} / '{DEMO_PASSWORD}' (development only)."
+            )
+        else:
+            print("Demo data already present; nothing to do.")
     return 0
 
 

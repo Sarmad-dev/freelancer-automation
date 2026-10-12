@@ -35,3 +35,17 @@ Self-hosted by the package, so builds do not need network access to Google Fonts
 
 ## D9 — Auth approach: deferred to MVP Prompt 3
 No session/auth code in the scaffold; CORS allows credentials only for configured origins.
+
+## D10 — Radix primitives + Tailwind for accessible components
+Radix (dialog, dropdown, tabs, tooltip, checkbox, toast) and cmdk provide tested keyboard/focus behaviour;
+we own the styling. Native `<select>` is used for Select for best AT support. Components live in
+`packages/ui` so the future Electron shell reuses them.
+
+## D11 — Themes via CSS variables + `data-theme`
+Dark is the default. A tiny inline script sets `data-theme` before paint; React owns later changes with
+`useSyncExternalStore` (no setState-in-effect). Components use semantic Tailwind utilities (`bg-surface`,
+`text-muted`) so adding a theme means editing one token file.
+
+## D12 — Planned destinations are real routes with honest placeholders
+All 11 playbook destinations exist with stable URLs, marked "Soon" in the nav and "Planned" on the page.
+Auth pages are disabled visual shells until MVP Prompt 3. The `/design-system` page is dev-only.

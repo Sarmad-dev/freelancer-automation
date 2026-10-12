@@ -1,0 +1,81 @@
+/*
+ * Import once from the app's global stylesheet, after `@import "tailwindcss"`:
+ *   @import "@freelancer-os/ui/styles.css";
+ *   @source "<path to packages/ui/src>";
+ * Maps design tokens to Tailwind semantic utilities (bg-surface, text-muted, border-line, ...).
+ */
+@import "./tokens.css";
+
+@theme inline {
+  --color-canvas: var(--fos-canvas);
+  --color-sidebar: var(--fos-sidebar);
+  --color-surface: var(--fos-surface);
+  --color-elevated: var(--fos-elevated);
+  --color-fg: var(--fos-text);
+  --color-muted: var(--fos-text-muted);
+  --color-line: var(--fos-border);
+  --color-accent: var(--fos-accent);
+  --color-on-accent: var(--fos-accent-contrast);
+  --color-success: var(--fos-success);
+  --color-warning: var(--fos-warning);
+  --color-danger: var(--fos-danger);
+  --color-info: var(--fos-info);
+  --font-sans: var(--fos-font-sans);
+  --radius-sm: var(--fos-radius-sm);
+  --radius-md: var(--fos-radius-md);
+  --radius-lg: var(--fos-radius-lg);
+}
+
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--fos-focus);
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: color-mix(in srgb, var(--fos-accent) 35%, transparent);
+  }
+}
+
+@keyframes fos-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes fos-slide-in-right {
+  from {
+    transform: translateX(16px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+@keyframes fos-slide-in-left {
+  from {
+    transform: translateX(-16px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+@keyframes fos-pop {
+  from {
+    transform: scale(0.97);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+@keyframes fos-pulse {
+  50% {
+    opacity: 0.5;
+  }
+}

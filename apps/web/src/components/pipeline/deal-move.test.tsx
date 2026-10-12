@@ -407,9 +407,7 @@ describe("useMoveDeal", () => {
     stubApi(() => Response.json({ error: { code: "x", message: "Nope." } }, { status: 400 }));
     renderHarness();
     await user.click(screen.getByRole("button", { name: "go" }));
-    await waitFor(() =>
-      expect(liveStatus()).toHaveTextContent("Couldn't move Big project: Nope."),
-    );
+    await waitFor(() => expect(liveStatus()).toHaveTextContent("Couldn't move Big project: Nope."));
     expect(screen.getByTestId("ops")).toHaveTextContent("");
     expect(refresh).not.toHaveBeenCalled();
   });

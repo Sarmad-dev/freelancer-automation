@@ -143,14 +143,24 @@ def connect(
     settings: SettingsDep,
     store: CredentialsDep,
     registry: RegistryDep,
+    limiter: LimiterDep,
 ) -> ConnectOut:
     require_owner(ctx)
+    decision = limiter.hit(f"email-connect:{ctx.workspace_id}", 10, 600)
+    if not decision.allowed:
+        raise AppError(
+            429,
+            "connect_rate_limited",
+            "Too many connection attempts. Wait a few minutes and try again.",
+            headers={"Retry-After": str(decision.retry_after)},
+        )
     url = svc.begin_authorization(
         db,
         ctx,
         store,
         registry.get(body.provider),
         redirect_uri=redirect_uri(settings),
+        now=utcnow(),
         login_hint=body.login_hint,
     )
     audit_event(

@@ -977,3 +977,49 @@ def test_a_flow_cannot_be_finished_by_someone_who_is_no_longer_the_owner(
     res = callback(client, state, code=CODE)
     assert "reason=not_allowed" in res.headers["location"] and "exchange_code" not in fake.calls
     assert client.get(ws_url(u["workspace_id"], "/accounts")).json() == []
+
+
+def test_starting_a_connection_is_rate_limited_and_cleans_up_abandoned_flows(
+    client: TestClient, db: DbSession
+) -> None:
+    u = make_user(client)
+    wid = u["workspace_id"]
+    install(client)
+    stale = store_of(client).put(
+        db, uuid.UUID(wid), "email_oauth_pending", {"token": "t", "user_id": "x"}
+    )
+    row = db.get(CredentialSecret, stale)
+    assert row is not None
+    row.created_at = datetime.now(UTC) - timedelta(hours=2)
+    db.commit()
+    first = client.post(ws_url(wid, "/accounts/connect"), json={"provider": "gmail"})
+    assert first.status_code == 200
+    db.expire_all()
+    assert db.get(CredentialSecret, stale) is None  # the abandoned record was purged
+    codes = [
+        client.post(ws_url(wid, "/accounts/connect"), json={"provider": "gmail"}).status_code
+        for _ in range(10)
+    ]
+    assert codes[:9] == [200] * 9 and codes[9] == 429
+    blocked = client.post(ws_url(wid, "/accounts/connect"), json={"provider": "gmail"})
+    assert (
+        blocked.json()["error"]["code"] == "connect_rate_limited"
+        and int(blocked.headers["retry-after"]) > 0
+    )
+
+
+def test_inbound_messages_from_a_real_provider_are_not_labelled_as_unknown_deliveries(
+    client: TestClient, db: DbSession
+) -> None:
+    u = make_user(client)
+    fake = install(client)
+    acct = connect_gmail(client, u["workspace_id"], fake)
+    fake.syncs = [page(remote("m1"), remote("m2", direction="outbound"))]
+    client.post(ws_url(u["workspace_id"], f"/accounts/{acct['id']}/sync"))
+    states = {
+        m.provider_message_id: m.delivery_state
+        for m in db.scalars(
+            select(Message).where(Message.email_account_id == uuid.UUID(acct["id"]))
+        )
+    }
+    assert states == {"m1": "sent", "m2": "sent"}

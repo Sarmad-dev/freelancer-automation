@@ -710,7 +710,7 @@ def seed_demo(db: DbSession) -> tuple[bool, uuid.UUID | None]:
             kind="send_email",
             target_type="lead",
             target_id=str(leads["northwind"].id),
-            payload_hash="demo-hash-1",
+            payload_hash=draft.content_hash,
             proposed_payload={"to": "redacted", "subject": draft.subject},
             status="pending",
             requested_by_user_id=None,

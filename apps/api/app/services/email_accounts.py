@@ -146,6 +146,7 @@ def begin_authorization(
     connector: EmailConnector,
     *,
     redirect_uri: str,
+    now: datetime,
     login_hint: str | None = None,
 ) -> str:
     """Create the single-use pending record and return the provider's consent URL."""
@@ -157,6 +158,7 @@ def begin_authorization(
             NotConfigured.code,
             f"{connector.manifest.label} is not set up on this server. An administrator must add the client credentials first.",
         )
+    _purge_expired_pending(db, now)  # abandoned flows must not pile up
     token = secrets.token_urlsafe(32)
     verifier = secrets.token_urlsafe(64)  # 86 chars: within RFC 7636's 43-128
     cred_id = store.put(
@@ -628,11 +630,8 @@ def _upsert_messages(
             conversation_id=conv.id,
             provider_message_id=rm.provider_message_id,
             direction=rm.direction,
-            delivery_state="demo"
-            if account.is_demo
-            else "sent"
-            if rm.direction == "outbound"
-            else "unknown",
+            # Delivery only means something for outbound mail; an inbound message was, by definition, delivered to us.
+            delivery_state="demo" if account.is_demo else "sent",
             from_address=rm.from_address,
             to_addresses=list(rm.to_addresses),
             subject=rm.subject,

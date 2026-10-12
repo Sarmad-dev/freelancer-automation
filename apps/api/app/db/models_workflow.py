@@ -264,6 +264,9 @@ class UsageRecord(TenantMixin, Base):
     success: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     is_mock: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     correlation_id: Mapped[str | None] = mapped_column(String(64))
+    # Short machine code for a failed call ("timeout", "invalid_output"): never a message and never content.
+    error_code: Mapped[str | None] = mapped_column(String(40))
+    prompt_version: Mapped[str | None] = mapped_column(String(20))
     occurred_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=utcnow
     )

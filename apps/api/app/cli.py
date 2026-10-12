@@ -2,6 +2,7 @@
 
 Commands
 - ``seed``            Insert idempotent development seed data (development/test only).
+- ``ai-eval``         Run the AI evaluation fixtures against the configured provider (exit 1 on any failure).
 - ``export-openapi``  Write the OpenAPI document used to generate frontend types.
 """
 
@@ -60,16 +61,43 @@ def export_openapi(target: str) -> int:
     return 0
 
 
+def ai_eval() -> int:
+    from app.ai.evals import run_evals
+    from app.ai.factory import build_provider
+
+    provider = build_provider(get_settings())
+    if provider.name == "disabled":
+        print("AI is disabled (AI_PROVIDER=disabled); nothing to evaluate.", file=sys.stderr)
+        return 1
+    report = run_evals(provider)
+    kind = (
+        "rule-based demo stand-in (measures the stand-in and the safety checks, not a model)"
+        if report.is_mock
+        else "live provider"
+    )
+    print(f"Evaluated provider: {report.provider}, {kind}")
+    for task, (passed, total) in report.by_task().items():
+        print(f"  {task:<24} {passed}/{total}")
+    for r in report.results:
+        if not r.passed:
+            print(f"  FAIL {r.id}: {r.reason}")
+    print(f"Total: {report.passed}/{report.total}")
+    return 0 if report.passed == report.total else 1
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="app.cli")
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("seed")
+    sub.add_parser("ai-eval")
     export = sub.add_parser("export-openapi")
     export.add_argument("target")
     args = parser.parse_args(argv)
     try:
         if args.command == "seed":
             return seed()
+        if args.command == "ai-eval":
+            return ai_eval()
         return export_openapi(args.target)
     except ConfigError as exc:
         print(exc, file=sys.stderr)

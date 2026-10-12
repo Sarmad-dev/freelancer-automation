@@ -42,6 +42,7 @@ Follow the playbook's MVP prompts in order; each phase ends with updated docs an
 | 5 | Freelancer profile and approved knowledge | **Done** |
 | 6 | Leads, contacts, companies, CSV import, fit scoring | **Done** |
 | 7 | Pipeline, tasks, activity timeline | **Done** |
-| 8–16 | AI, email, inbox, workflows, approvals, integrations, analytics, release readiness | Not started |
+| 8 | AI provider abstraction and safe structured outputs | **Done** |
+| 9–16 | Email, inbox, workflows, approvals, integrations, analytics, release readiness | Not started |
 
 See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for details.

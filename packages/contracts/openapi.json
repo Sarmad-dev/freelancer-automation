@@ -165,6 +165,152 @@
         "title": "AiContext",
         "type": "object"
       },
+      "AiStatus": {
+        "description": "What is behind the AI features, without any secret. Safe for every member to read.",
+        "properties": {
+          "available": {
+            "description": "False when AI is switched off.",
+            "title": "Available",
+            "type": "boolean"
+          },
+          "fast_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fast Model"
+          },
+          "is_mock": {
+            "description": "True when results come from the rule-based stand-in, not a model.",
+            "title": "Is Mock",
+            "type": "boolean"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "max_attempts": {
+            "title": "Max Attempts",
+            "type": "integer"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "provider": {
+            "description": "mock | gateway | disabled",
+            "title": "Provider",
+            "type": "string"
+          },
+          "rate_limit_per_minute": {
+            "title": "Rate Limit Per Minute",
+            "type": "integer"
+          },
+          "tasks": {
+            "items": {
+              "$ref": "#/components/schemas/AiTaskStatus"
+            },
+            "title": "Tasks",
+            "type": "array"
+          },
+          "timeout_seconds": {
+            "title": "Timeout Seconds",
+            "type": "number"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/AiUsageSummary"
+          }
+        },
+        "required": [
+          "provider",
+          "available",
+          "is_mock",
+          "label",
+          "model",
+          "fast_model",
+          "rate_limit_per_minute",
+          "timeout_seconds",
+          "max_attempts",
+          "tasks",
+          "usage"
+        ],
+        "title": "AiStatus",
+        "type": "object"
+      },
+      "AiTaskStatus": {
+        "properties": {
+          "model_tier": {
+            "title": "Model Tier",
+            "type": "string"
+          },
+          "prompt_version": {
+            "title": "Prompt Version",
+            "type": "string"
+          },
+          "task": {
+            "title": "Task",
+            "type": "string"
+          }
+        },
+        "required": [
+          "task",
+          "prompt_version",
+          "model_tier"
+        ],
+        "title": "AiTaskStatus",
+        "type": "object"
+      },
+      "AiUsageSummary": {
+        "properties": {
+          "average_latency_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Average Latency Ms"
+          },
+          "calls": {
+            "title": "Calls",
+            "type": "integer"
+          },
+          "failures": {
+            "title": "Failures",
+            "type": "integer"
+          },
+          "mock_calls": {
+            "title": "Mock Calls",
+            "type": "integer"
+          },
+          "window_hours": {
+            "title": "Window Hours",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "window_hours",
+          "calls",
+          "failures",
+          "mock_calls",
+          "average_latency_ms"
+        ],
+        "title": "AiUsageSummary",
+        "type": "object"
+      },
       "AuthConfig": {
         "properties": {
           "password_reset_enabled": {
@@ -6886,6 +7032,89 @@
         "summary": "Exactly what an AI model may know: profile + approved, enabled knowledge",
         "tags": [
           "profile"
+        ]
+      }
+    },
+    "/api/v1/workspaces/{workspace_id}/ai/status": {
+      "get": {
+        "operationId": "ai_status_api_v1_workspaces__workspace_id__ai_status_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspace_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspace Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Which AI provider is in use",
+        "tags": [
+          "ai"
         ]
       }
     },

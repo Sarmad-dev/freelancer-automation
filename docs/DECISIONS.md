@@ -169,3 +169,21 @@ The task form generates a key once when it opens and sends it with every submit.
 ## D42 — Task notifications are produced when notifications are read
 Until a job runner exists (Prompt 11) the API creates "task due" and "task reminder" notifications lazily when the unread count or list is requested, with one dedupe key per (task, kind, instant), looking back 14 days and capping each read at 50. Completing, dismissing or rescheduling a task marks its pending notifications read. The same function can be called from a scheduled job later without any change in behaviour.
 
+## D43 — Domain code talks to `AiService`, never to a vendor
+All model use goes through one service with six typed tasks. A provider only has to turn a prompt into text (`complete`); everything else — prompts, validation, retries, fallback, metering — is ours and identical for every vendor. The default is a labelled rule-based stand-in so the product works and is testable without credentials; production defaults to `disabled`, and `mock` is refused there so fake output can never pass as AI.
+
+## D44 — Model output is validated, never repaired, and never executed
+A reply must be JSON that matches the task's schema exactly (one ```json fence is tolerated), then pass task checks (fields cited exist; facts cited were supplied; numbers, links and addresses in a draft must come from supplied facts; extracted facts need an exact source quote). Anything else is discarded and retried within a small bound. Results are suggestions: nothing in the AI layer sends, saves, approves or changes records.
+
+## D45 — Prompt injection is handled by structure, not by detection
+Untrusted text is minimised (no addresses, phones, URL queries), fenced with a per-call random boundary, and described to the model as data; the output is then validated as above. An injection phrase detector exists only to warn the person and cap confidence. Two things are deterministic because a mistake is costly: an explicit opt-out is always classified `unsubscribe`, and a recommendation to contact someone who opted out is replaced.
+
+## D46 — Only classification has a fallback; drafts are never templated
+When the provider is down, classification falls back to labelled keyword rules (confidence ≤ 0.6) because a rough category is better than none. Drafting, fit, extraction and summaries fail with a clear message instead of producing look-alike text: a templated "AI draft" would be an unsupported claim about what the system knows.
+
+## D47 — Usage is metered without content
+Each call writes a `usage_records` row (task, provider, model, prompt version, tokens when reported, estimated cost, latency, success, short error code) and one log line of the same metadata. Prompts, emails and replies are never stored or logged and no setting enables it. Metering failures never fail the user's request.
+
+## D48 — The gateway adapter targets the common chat-completions shape and is labelled unverified
+The playbook names "Jev" as the preferred gateway, but no credentials or verified documentation were available. The adapter speaks the widely used OpenAI-compatible shape, is tested against a simulated server only, does not follow redirects, never copies response bodies into errors, and the docs say plainly that no live provider has been evaluated. `python -m app.cli ai-eval` is the check to run before trusting one.
+

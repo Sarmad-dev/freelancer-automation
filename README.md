@@ -42,6 +42,12 @@ and `__Host-` prefixed), `RATE_LIMIT_BACKEND=redis`, `CORS_ALLOWED_ORIGINS` set 
 (it doubles as the CSRF origin allow-list), and `TRUSTED_PROXY_COUNT` matching your proxy chain. The API
 refuses to start in production with insecure values.
 
+## AI
+AI runs through a replaceable provider layer ([docs/AI.md](docs/AI.md)). By default (development) it is a **rule-based demo stand-in**,
+clearly labelled, so everything works without credentials. To use a real model set `AI_PROVIDER=gateway` plus `AI_BASE_URL`,
+`AI_API_KEY` and `AI_MODEL` in the API's environment (server-side only). `cd apps/api && uv run python -m app.cli ai-eval` runs
+the evaluation set against whichever provider is configured. In production AI is off unless configured.
+
 ## Leads (no outside lead source needed)
 Add leads by hand at `/leads` (a title is enough), or import a CSV at `/leads/import` (upload, map columns, preview, choose how
 to treat duplicates, import, download the error report). The demo workspace ships with clearly labelled **Sample** leads. Fit

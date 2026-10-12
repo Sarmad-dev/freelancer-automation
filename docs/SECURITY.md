@@ -130,6 +130,9 @@ Imports accept only data in the file the user chose; nothing is fetched. Files a
 ## Pipeline, tasks and notifications
 Deal and task writes are owner-only and workspace-scoped (stages, leads, deals and conversations a request refers to must belong to the workspace; the database also refuses cross-tenant links). Audit events for stage moves carry only the destination stage key; task events carry no titles or descriptions. Notifications are per user: another member of the same workspace cannot read or mark them, and notification links are relative paths only (validated on the server and again in the browser). Task creation is idempotent by key so retries cannot duplicate records.
 
+## AI calls
+Details in [AI.md](AI.md). The provider key lives only in the server environment (`SecretStr`, never logged, never returned by the status endpoint, never in an error message); production refuses the demo provider, a non-https gateway URL and URLs with embedded credentials; redirects from the gateway are not followed. Emails, imports, documents and notes are untrusted: personal data is removed, text is fenced, replies are validated and nothing a model says is executed. Prompts, emails and replies are never stored or logged; usage rows and log lines carry metadata only. Context is workspace-scoped and built from approved facts only; drafting never receives pricing guidance or excluded-customer notes. Calls are rate-limited per workspace before the provider is contacted.
+
 ## Known gaps (tracked)
 
 - **No email verification yet** (`email_verified_at` is always null). Consequently sign-up reveals whether an

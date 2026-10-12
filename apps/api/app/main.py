@@ -11,11 +11,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app import __version__
+from app.ai.factory import build_provider
 from app.config import Settings, get_settings
 from app.errors import install_error_handlers
 from app.mailer import ConsoleMailer, DisabledMailer, Mailer
 from app.ratelimit import MemoryRateLimiter, RateLimiter, RedisRateLimiter
 from app.routers import (
+    ai,
     auth,
     companies,
     contacts,
@@ -82,6 +84,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     app.state.rate_limiter = limiter
     app.state.mailer = mailer
+    app.state.ai_provider = build_provider(settings)
     app.state.credentials = build_store(settings.credential_encryption_keys)
     install_error_handlers(app)
 
@@ -137,6 +140,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(opportunities.router)
     app.include_router(tasks.router)
     app.include_router(notifications.router)
+    app.include_router(ai.router)
     return app
 
 

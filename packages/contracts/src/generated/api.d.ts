@@ -140,6 +140,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workspaces/{workspace_id}/ai/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Which AI provider is in use */
+        get: operations["ai_status_api_v1_workspaces__workspace_id__ai_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workspaces/{workspace_id}/companies": {
         parameters: {
             query?: never;
@@ -1263,6 +1280,64 @@ export interface components {
             };
             /** Truncated */
             truncated: boolean;
+        };
+        /**
+         * AiStatus
+         * @description What is behind the AI features, without any secret. Safe for every member to read.
+         */
+        AiStatus: {
+            /**
+             * Available
+             * @description False when AI is switched off.
+             */
+            available: boolean;
+            /** Fast Model */
+            fast_model: string | null;
+            /**
+             * Is Mock
+             * @description True when results come from the rule-based stand-in, not a model.
+             */
+            is_mock: boolean;
+            /** Label */
+            label: string;
+            /** Max Attempts */
+            max_attempts: number;
+            /** Model */
+            model: string | null;
+            /**
+             * Provider
+             * @description mock | gateway | disabled
+             */
+            provider: string;
+            /** Rate Limit Per Minute */
+            rate_limit_per_minute: number;
+            /** Tasks */
+            tasks: components["schemas"]["AiTaskStatus"][];
+            /** Timeout Seconds */
+            timeout_seconds: number;
+            usage: components["schemas"]["AiUsageSummary"];
+        };
+        /** AiTaskStatus */
+        AiTaskStatus: {
+            /** Model Tier */
+            model_tier: string;
+            /** Prompt Version */
+            prompt_version: string;
+            /** Task */
+            task: string;
+        };
+        /** AiUsageSummary */
+        AiUsageSummary: {
+            /** Average Latency Ms */
+            average_latency_ms: number | null;
+            /** Calls */
+            calls: number;
+            /** Failures */
+            failures: number;
+            /** Mock Calls */
+            mock_calls: number;
+            /** Window Hours */
+            window_hours: number;
         };
         /** AuthConfig */
         AuthConfig: {
@@ -3662,6 +3737,73 @@ export interface operations {
             };
             /** @description Unauthorized */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    ai_status_api_v1_workspaces__workspace_id__ai_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiStatus"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

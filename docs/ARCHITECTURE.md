@@ -51,6 +51,9 @@ http(s) in the browser (`lib/safe-url.ts`).
 ## Pipeline, tasks and notifications (MVP Prompt 7)
 `routers/opportunities|tasks|notifications` (and `GET /pipeline/board`) call `services/opportunities.py` (deal rules, board aggregation), `services/tasks.py` (idempotent creation, state changes, views), `services/notifications.py` (lazy "due" notifications) and `services/times.py` (zone-aware instants and local-day bounds). On the web, `/pipeline` is a board (native drag and drop plus a keyboard-accessible Move control, optimistic with rollback) and a table; `/pipeline/{id}` is the deal; `/tasks` has the Overdue/Today/Upcoming/No date/Done views; the top-bar bell polls the unread count. `TaskDrawer` and `OpportunityFields` are shared by every page that creates or edits these records.
 
+## AI service layer (MVP Prompt 8)
+`app/ai/` holds `AiService` (`service.py`), versioned `prompts.py`, strict `schemas.py`, `untrusted.py` (minimise, fence, injection signals), `validate.py` (claims, leaks), `rules.py` (opt-out and fallback), providers (`mock`, `gateway`, `disabled`), `inputs.py` (workspace-scoped model inputs) and `evals.py`. `services/ai_context.py` still decides which facts a model may know (D27); `AiService` decides what the model is asked and what it may answer (D43–D48). `GET /ai/status` is the only HTTP surface for now. See [AI.md](AI.md).
+
 ## Contracts
 FastAPI is the single source of truth. `pnpm contracts:generate` exports `packages/contracts/openapi.json`
 and regenerates `src/generated/api.d.ts` (openapi-typescript). The web app uses `openapi-fetch` through

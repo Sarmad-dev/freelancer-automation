@@ -16,6 +16,7 @@ dependencies = [
   "email-validator>=2.3.0",
   "cryptography>=50.0.2",
   "tzdata>=2026.5",
+  "httpx>=0.28.1",
 ]
 
 [dependency-groups]

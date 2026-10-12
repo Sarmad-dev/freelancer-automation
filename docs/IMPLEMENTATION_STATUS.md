@@ -1,6 +1,44 @@
 # Implementation status
 
-_Last updated: MVP Prompt 7 (pipeline, tasks and activity timeline)._
+_Last updated: MVP Prompt 8 (AI provider abstraction and safe structured outputs)._
+
+## Completed — MVP Prompt 8: AI provider abstraction and safe structured outputs
+- **Service layer** (`apps/api/app/ai/`, [AI.md](AI.md)): `AiService` with the six tasks (`classify_reply`, `assess_lead_fit`, `extract_profile_facts`,
+  `draft_outreach`, `summarize_conversation`, `recommend_next_action`), typed inputs/outputs, versioned prompt templates, per-attempt
+  timeouts, bounded retries with backoff, a total time budget, a per-workspace rate limit, and `AiOutcome` results that never raise for a
+  provider problem. Decisions D43–D48.
+- **Providers:** `mock` (labelled rule-based stand-in; default in development/test; refused in production), `gateway` (OpenAI-compatible
+  chat-completions adapter), `disabled` (production default). Server-side configuration only (`AI_*` variables, key held as a `SecretStr`).
+- **Safety:** inputs are minimised (no addresses, phones, URL queries) and fenced as untrusted data; replies are validated, never repaired
+  (schema, cited fields exist, cited facts were supplied, no invented numbers/links/addresses/familiarity, extracted facts need an exact
+  source quote and are always `pending_review`, no system-prompt/canary/credential echo); opt-outs are enforced by rules even if a model
+  disagrees; drafting refuses (without calling a model) when there are no approved facts or profile basics; drafting never receives pricing
+  guidance or exclusions. Only classification has a fallback (labelled keyword rules).
+- **Metering:** every call writes a content-free `usage_records` row (migration **0006** adds `error_code`, `prompt_version`) and one log
+  line of metadata; prompts, emails and replies are never stored or logged. `GET /api/v1/workspaces/{id}/ai/status` (members can read) shows
+  the provider, models, limits, prompt versions and 24 h usage.
+- **Evaluation:** 18 synthetic cases; `uv run python -m app.cli ai-eval` (exit 1 on any failure).
+- **Input builders** (`ai/inputs.py`): workspace-scoped lead, draft-target (first name only) and conversation (newest N snippets) inputs.
+- **New dependency:** `httpx` moved from dev to runtime dependencies (installed into `apps/api/.venv` with `uv add`).
+
+## Verification: MVP Prompt 8
+- API: 1,120 pytest tests (113 new) pass on SQLite, PostgreSQL 16 and Python 3.12; ruff and mypy (strict) clean. New suites: untrusted-text
+  handling (18), the service (56: malformed output, timeouts, retries and budgets, fallback, injection-like emails, opt-out guard, missing
+  profile facts, unsupported claims, rate limits, metering and log redaction), the gateway adapter against a simulated server (22), config
+  (5), status endpoint/input builders/evals/migration (12).
+- Mutation checks (each made tests fail): opt-out guard off, number-claim check off, unknown fact ids allowed, leak check off, pricing
+  guidance sent to the model, insufficient-context refusal off, email addresses not removed, opted-out recommendation allowed, extraction
+  quote check off, retry cap off, rate limit off, redirects followed, uncited evidence fields allowed, forged fences not defused, injection
+  confidence cap off, fallback for throttled callers, summary claim check off.
+- Evaluation: 18/18 with the demo provider. **That measures the stand-in and the safety layer only.**
+
+## Not verified / known gaps (Prompt 8)
+- **No live provider has been used.** The gateway adapter is verified only against a simulated server; "Jev" is unverified (no credentials or
+  documentation were available). Run `ai-eval` against a real provider before relying on it.
+- No UI calls the tasks yet (inbox, drafts and workflows arrive in Prompts 10–13); only the status endpoint exists.
+- Messages store a 500-character snippet, so conversation inputs are short until email storage lands (Prompt 9).
+- Injection detection is heuristic and English-centred; the validators are the protection. Cost figures are estimates from an optional price list.
+- No per-provider privacy setting for sending message content (post-MVP).
 
 ## Completed — MVP Prompt 7: pipeline, tasks and activity timeline
 - **API** (owner writes, members read; workspace-scoped, audited): `opportunities` list/create/edit, `move` and `reopen`, deal

@@ -10,7 +10,7 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field, ValidationError, field_validator, model_validator
+from pydantic import Field, SecretStr, ValidationError, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _INSECURE_SECRETS = {"", "change-me", "changeme", "secret", "replace-me"}
@@ -61,6 +61,35 @@ class Settings(BaseSettings):
     # "console" prints reset links (development only). "disabled" turns password reset off.
     mail_backend: Literal["console", "disabled"] | None = Field(default=None, alias="MAIL_BACKEND")
 
+    # --- AI provider (MVP Prompt 8). Server-side only; the key never reaches the browser or the logs. ---
+    # mock = rule-based stand-in that labels everything it produces (dev/test default);
+    # gateway = an OpenAI-compatible chat-completions endpoint; disabled = AI features report "unavailable".
+    ai_provider: Literal["mock", "gateway", "disabled"] | None = Field(
+        default=None, alias="AI_PROVIDER"
+    )
+    ai_base_url: str = Field(default="", alias="AI_BASE_URL")
+    ai_api_key: SecretStr = Field(default=SecretStr(""), alias="AI_API_KEY")
+    # One model for everything, optionally a cheaper/faster one for classification, extraction and summaries.
+    ai_model: str = Field(default="", alias="AI_MODEL")
+    ai_model_fast: str = Field(default="", alias="AI_MODEL_FAST")
+    ai_timeout_seconds: float = Field(default=20.0, gt=0, le=120, alias="AI_TIMEOUT_SECONDS")
+    # Attempts per call (first try included) and the wall-clock budget across all of them.
+    ai_max_attempts: int = Field(default=2, ge=1, le=4, alias="AI_MAX_ATTEMPTS")
+    ai_total_budget_seconds: float = Field(
+        default=45.0, gt=0, le=300, alias="AI_TOTAL_BUDGET_SECONDS"
+    )
+    # Model calls allowed per workspace per minute.
+    ai_rate_limit_per_minute: int = Field(
+        default=30, ge=1, le=10_000, alias="AI_RATE_LIMIT_PER_MINUTE"
+    )
+    # Optional price list used only to ESTIMATE cost (millionths of a currency unit per 1,000 tokens).
+    ai_input_cost_micros_per_1k: int | None = Field(
+        default=None, ge=0, alias="AI_INPUT_COST_MICROS_PER_1K"
+    )
+    ai_output_cost_micros_per_1k: int | None = Field(
+        default=None, ge=0, alias="AI_OUTPUT_COST_MICROS_PER_1K"
+    )
+
     @field_validator("database_url")
     @classmethod
     def _check_database_url(cls, value: str) -> str:
@@ -102,11 +131,34 @@ class Settings(BaseSettings):
                     'generate with: python -c "from cryptography.fernet import Fernet; '
                     'print(Fernet.generate_key().decode())")'
                 )
+            if self.effective_ai_provider == "mock":
+                raise ValueError(
+                    "AI_PROVIDER=mock is for development only (its output is not written by a model); "
+                    "use gateway or disabled"
+                )
             if self.effective_rate_limit_backend == "memory":
                 raise ValueError(
                     "RATE_LIMIT_BACKEND=memory is not allowed in production (use redis)"
                 )
+        if self.effective_ai_provider == "gateway":
+            problems = []
+            if not self.ai_base_url.startswith(("https://", "http://")):
+                problems.append("AI_BASE_URL (an http(s) URL)")
+            if not self.ai_api_key.get_secret_value():
+                problems.append("AI_API_KEY")
+            if not self.ai_model.strip():
+                problems.append("AI_MODEL")
+            if problems:
+                raise ValueError("AI_PROVIDER=gateway needs " + ", ".join(problems))
+            if "@" in self.ai_base_url.split("//", 1)[1].split("/", 1)[0]:
+                raise ValueError("AI_BASE_URL must not contain credentials; use AI_API_KEY")
+            if self.app_env == "production" and not self.ai_base_url.startswith("https://"):
+                raise ValueError("AI_BASE_URL must use https in production")
         return self
+
+    @property
+    def effective_ai_provider(self) -> str:
+        return self.ai_provider or ("disabled" if self.app_env == "production" else "mock")
 
     @property
     def secure_cookies(self) -> bool:

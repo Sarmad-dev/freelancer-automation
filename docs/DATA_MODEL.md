@@ -13,7 +13,7 @@ migrations: `apps/api/alembic/versions` (`0003_domain_model` added 26 tables: ev
 | Email & outreach | `email_accounts`, `conversations`, `messages`, `drafts`, `suppression_entries` | Message **metadata only** (no body column yet). Drafts carry `content_hash` / `approved_content_hash` so approval binds to exact content. |
 | Integrations & secrets | `integration_connections`, `credential_secrets` | Connections hold a `credential_id` only. Secrets live encrypted in `credential_secrets`. |
 | Workflows | `workflows`, `workflow_versions`, `workflow_nodes`, `workflow_edges`, `workflow_runs`, `workflow_step_runs`, `approval_requests` | Versions are immutable snapshots (nodes/edges are rows). A run is pinned to one version. |
-| Operations | `usage_records`, `notifications`, `audit_events` | Usage never stores prompts/content. Notifications de-dupe on `(user_id, dedupe_key)`. |
+| Operations | `usage_records`, `notifications`, `audit_events` | Usage never stores prompts/content (AI calls record task, provider, model, prompt version, tokens, latency, success and a short `error_code`). Notifications de-dupe on `(user_id, dedupe_key)`. |
 
 ## Conventions (enforced by `tests/test_schema_guards.py`, which also protects tables added later)
 

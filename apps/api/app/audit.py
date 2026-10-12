@@ -14,7 +14,26 @@ from app.db.models import AuditEvent
 
 # Keys permitted in AuditEvent.details. Anything else is dropped, so a careless caller cannot leak data.
 ALLOWED_DETAIL_KEYS = frozenset(
-    {"reason", "step", "status", "demo_mode", "email_hash", "missing_steps", "sessions_revoked"}
+    {
+        "reason",
+        "step",
+        "status",
+        "demo_mode",
+        "email_hash",
+        "missing_steps",
+        "sessions_revoked",
+        # Field names / counts / versions only, never values (MVP Prompt 5).
+        "fields",
+        "version",
+        "count",
+        "kind",
+        # Counts and modes only (MVP Prompt 6).
+        "created",
+        "updated",
+        "skipped",
+        "errors",
+        "strategy",
+    }
 )
 
 

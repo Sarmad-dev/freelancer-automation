@@ -44,8 +44,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     label: "Leads",
     href: "/leads",
     icon: Users,
-    status: "planned",
-    phase: "MVP Prompt 6",
+    status: "available",
     description: "Leads, companies and contacts with CSV import, filtering and fit scoring.",
   },
   {
@@ -98,9 +97,9 @@ export const NAV_ITEMS: readonly NavItem[] = [
     label: "AI Workspace",
     href: "/ai-workspace",
     icon: Sparkles,
-    status: "planned",
-    phase: "MVP Prompts 5 and 8",
-    description: "Freelancer profile, approved knowledge and generation history.",
+    status: "available",
+    description:
+      "Your profile and the approved knowledge AI is allowed to use. Generation history arrives with the AI features.",
   },
   {
     id: "integrations",
@@ -150,6 +149,37 @@ const EXTRA_ROUTE_LABELS: Record<string, string> = {
   "/onboarding": "Onboarding",
 };
 
+/** Known second-level pages inside a primary destination. */
+const SUBPAGE_LABELS: Record<string, string> = {
+  "/ai-workspace/profile": "Profile",
+  "/ai-workspace/knowledge": "Knowledge",
+  "/leads/companies": "Companies",
+  "/leads/contacts": "Contacts",
+  "/leads/scoring": "Fit scoring",
+  "/leads/import": "Import",
+};
+
+const ID = "[0-9a-fA-F-]{36}";
+
+/** Detail pages: the list they belong to (when it has its own page) and their own label. */
+const DETAIL_ROUTES: readonly {
+  pattern: RegExp;
+  parent?: { label: string; href: string };
+  label: string;
+}[] = [
+  {
+    pattern: new RegExp(`^/leads/companies/${ID}$`),
+    parent: { label: "Companies", href: "/leads/companies" },
+    label: "Company",
+  },
+  {
+    pattern: new RegExp(`^/leads/contacts/${ID}$`),
+    parent: { label: "Contacts", href: "/leads/contacts" },
+    label: "Contact",
+  },
+  { pattern: new RegExp(`^/leads/${ID}$`), label: "Lead" },
+];
+
 export function resolveBreadcrumbs(pathname: string): Crumb[] {
   const current = NAV_ITEMS.find((i) => i.href !== "/" && isActivePath(pathname, i.href));
   if (!current) {
@@ -160,10 +190,17 @@ export function resolveBreadcrumbs(pathname: string): Crumb[] {
       : [{ label: "Home", href: "/" }, { label: "Page" }];
   }
   const crumbs: Crumb[] = [{ label: "Home", href: "/" }];
+  const sub = SUBPAGE_LABELS[pathname];
   crumbs.push(
     pathname === current.href
       ? { label: current.label }
       : { label: current.label, href: current.href },
   );
+  if (sub) crumbs.push({ label: sub });
+  const detail = DETAIL_ROUTES.find((d) => d.pattern.test(pathname));
+  if (detail) {
+    if (detail.parent) crumbs.push(detail.parent);
+    crumbs.push({ label: detail.label });
+  }
   return crumbs;
 }

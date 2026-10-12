@@ -18,6 +18,7 @@ from typing import Any
 from sqlalchemy import (
     JSON,
     Boolean,
+    CheckConstraint,
     DateTime,
     ForeignKey,
     Index,
@@ -164,6 +165,7 @@ class FreelancerProfile(_Timestamps, Base):
     """The freelancer's business profile. Onboarding fills it; MVP Prompt 5 extends it."""
 
     __tablename__ = "freelancer_profiles"
+    __table_args__ = (CheckConstraint("version >= 1", name="version_positive"),)
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=_uuid)
     workspace_id: Mapped[uuid.UUID] = mapped_column(
@@ -182,6 +184,13 @@ class FreelancerProfile(_Timestamps, Base):
     tone_notes: Mapped[str | None] = mapped_column(String(300))
     business_goal: Mapped[str | None] = mapped_column(String(40))
     business_goal_notes: Mapped[str | None] = mapped_column(String(300))
+    # Added in MVP Prompt 5. The pricing and exclusion fields are private: never part of public summaries.
+    excluded_customers: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    differentiators: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    pricing_guidance: Mapped[str | None] = mapped_column(String(1000))
+    preferred_cta: Mapped[str | None] = mapped_column(String(200))
+    # Incremented on every change; clients send the version they edited for optimistic concurrency.
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
 
 
 class OnboardingProgress(_Timestamps, Base):

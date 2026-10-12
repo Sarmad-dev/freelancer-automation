@@ -8,12 +8,13 @@ is appended) so pages never overlap or skip rows.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Annotated, Any
 
 from fastapi import Query
 from pydantic import BaseModel
-from sqlalchemy import ColumnElement, Select, func, select
+from sqlalchemy import ColumnElement, Select, SQLColumnExpression, func, select
 from sqlalchemy.orm import InstrumentedAttribute, Session
 
 from app.errors import AppError
@@ -52,7 +53,7 @@ def page_params(
 
 
 def parse_sort(
-    sort: str | None, allowed: dict[str, InstrumentedAttribute[Any]], default: str
+    sort: str | None, allowed: Mapping[str, SQLColumnExpression[Any]], default: str
 ) -> list[ColumnElement[Any]]:
     """Translate ``"-created_at,name"`` into ORDER BY expressions, rejecting anything not allow-listed."""
     spec = (sort or default).strip()
@@ -76,7 +77,8 @@ def parse_sort(
                 "Some fields are invalid.",
                 fields={"sort": f"Cannot sort by '{name}'. Allowed: {', '.join(sorted(allowed))}."},
             )
-        clauses.append(column.desc() if descending else column.asc())
+        # NULLs always last, so SQLite and PostgreSQL order unscored/undated rows the same way.
+        clauses.append(column.desc().nulls_last() if descending else column.asc().nulls_last())
     return clauses
 
 
@@ -85,7 +87,7 @@ def paginate(
     stmt: Select,  # type: ignore[type-arg]
     params: PageParams,
     *,
-    allowed_sort: dict[str, InstrumentedAttribute[Any]],
+    allowed_sort: Mapping[str, SQLColumnExpression[Any]],
     default_sort: str,
     tie_breaker: InstrumentedAttribute[Any],
 ) -> tuple[list, int]:  # type: ignore[type-arg]

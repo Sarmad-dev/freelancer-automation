@@ -42,6 +42,13 @@ and `__Host-` prefixed), `RATE_LIMIT_BACKEND=redis`, `CORS_ALLOWED_ORIGINS` set 
 (it doubles as the CSRF origin allow-list), and `TRUSTED_PROXY_COUNT` matching your proxy chain. The API
 refuses to start in production with insecure values.
 
+## Leads (no outside lead source needed)
+Add leads by hand at `/leads` (a title is enough), or import a CSV at `/leads/import` (upload, map columns, preview, choose how
+to treat duplicates, import, download the error report). The demo workspace ships with clearly labelled **Sample** leads. Fit
+scores come from criteria you set at `/leads/scoring`: rule-based, explained criterion by criterion, never from AI, and shown as
+"not enough information" when the data isn't there. Imports and exports are owner-only; exported CSVs neutralise spreadsheet
+formulas. Nothing is scraped or fetched: only data you type or upload is used.
+
 ## Scripts
 | Command | Purpose |
 |---|---|

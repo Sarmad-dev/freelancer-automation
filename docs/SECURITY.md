@@ -120,6 +120,12 @@ All input is validated by Pydantic at the API boundary (types, lengths, enums, I
 characters, whitespace normalisation, `extra="forbid"` on onboarding bodies). Portfolio URLs must be public
 `http(s)` URLs without credentials; localhost, `.local/.internal`, and non-global IPs are rejected so a future
 fetcher cannot be pointed at internal addresses. Text is stored verbatim and must always be rendered as text.
+Zero-width/bidi-control characters are stripped (D29). Knowledge `source_ref` accepts only a public `http(s)` URL or a
+plain label (`javascript:`, `data:` and any `scheme://` are refused). Knowledge and profile writes are owner-only; members
+get read access. Audit details for these actions are limited to field *names*, counts, kinds and versions, never content.
+
+## CSV import and export
+Imports accept only data in the file the user chose; nothing is fetched. Files are size/row/column limited, parsed strictly (a malformed quote is an error, not silently swallowed data) and every cell is validated like the equivalent form field (email, public website, phone, lengths, control and invisible characters). Preview and import are owner-only. The raw file is never stored; the import record keeps counts and a capped list of row problems, and its audit event only carries counts. Exports and error reports are owner-only, audited by count, capped, served with `no-store`/`nosniff`, and neutralise spreadsheet formulas in every cell. Do-not-contact is derived from the suppression list and is shown on leads and contacts and in imports; nothing in this phase sends email.
 
 ## Known gaps (tracked)
 

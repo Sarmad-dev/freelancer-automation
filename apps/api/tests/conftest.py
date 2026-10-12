@@ -105,3 +105,16 @@ def reset_demo(db: DbSession) -> None:
         db.delete(db.get(Workspace, ws_id))
     db.delete(user)
     db.commit()
+
+
+def second_client(client: TestClient) -> TestClient:
+    """A second browser (own cookie jar) against the same app."""
+    return TestClient(client.app, headers=dict(client.headers), base_url="http://localhost:3000")
+
+
+def add_member(db: DbSession, workspace_id: str, user_id: str, role: str = "member") -> None:
+    """Grant an existing user a non-owner role in a workspace (teams are post-MVP, but roles are enforced)."""
+    from app.db.models import Membership
+
+    db.add(Membership(workspace_id=uuid.UUID(workspace_id), user_id=uuid.UUID(user_id), role=role))
+    db.commit()

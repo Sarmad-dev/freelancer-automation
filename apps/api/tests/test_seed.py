@@ -82,10 +82,19 @@ def test_seed_content_is_realistic_and_internally_consistent(
     db: DbSession, demo: uuid.UUID
 ) -> None:
     leads = db.scalars(select(Lead).where(Lead.workspace_id == demo)).all()
-    assert len(leads) == 4 and all(
-        0 <= (ld.fit_score or 0) <= 100 and ld.fit_explanation for ld in leads
-    )
+    assert len(leads) == 5 and all(ld.fit_explanation for ld in leads)
+    assert all(ld.fit_score is None or 0 <= ld.fit_score <= 100 for ld in leads)
     assert {ld.status for ld in leads} >= {"new", "replied", "qualified"}
+    # Scores come from the real rules and show the whole range, including "not enough information".
+    bands = {ld.fit_explanation["band"] for ld in leads}  # type: ignore[index]
+    assert bands == {"strong", "weak", "insufficient"}
+    by_title = {ld.title: ld for ld in leads}
+    inbound = by_title["Inbound inquiry (fictional)"]
+    assert inbound.fit_score is None and inbound.fit_explanation["band"] == "insufficient"  # type: ignore[index]
+    gambling = by_title["Tailspin Co (fictional) website rebuild"]
+    assert gambling.fit_explanation["capped"] is True and gambling.fit_score == 25  # type: ignore[index]
+    assert all(ld.fit_explanation["config_version"] == 1 for ld in leads)  # type: ignore[index]
+    assert all(ld.is_sample and ld.source == "seed" for ld in leads)
     # The pending approval is bound to the exact draft content (approval must be re-requested if it changes).
     approval = db.scalar(select(ApprovalRequest).where(ApprovalRequest.workspace_id == demo))
     draft = db.get(Draft, approval.draft_id)  # type: ignore[union-attr]
@@ -127,3 +136,33 @@ def test_cli_seed_creates_then_reports_nothing_to_do(
     assert main(["seed"]) == 0
     assert "Demo data already present" in capsys.readouterr().out
     assert db.scalar(select(func.count()).select_from(Tag)) > 0  # type: ignore[operator]
+
+
+def test_demo_profile_and_knowledge_cover_every_review_state(
+    client: TestClient, demo: uuid.UUID
+) -> None:
+    client.post("/api/v1/auth/sign-in", json={"email": DEMO_EMAIL, "password": DEMO_PASSWORD})
+    profile = client.get(f"/api/v1/workspaces/{demo}/profile").json()
+    assert (
+        profile["pricing_guidance"]
+        and profile["excluded_customers"]
+        and profile["differentiators"]
+        and profile["preferred_cta"]
+    )
+    assert profile["completeness"]["missing"] == [] and "fictional" in profile["role_title"].lower()
+    assert client.get(f"/api/v1/workspaces/{demo}/knowledge/stats").json() == {
+        "draft": 1,
+        "pending_review": 1,
+        "approved": 3,
+        "rejected": 1,
+        "in_use": 2,
+        "disabled": 1,
+    }
+    ctx = client.get(f"/api/v1/workspaces/{demo}/ai-context").json()
+    assert sorted(f["title"] for f in ctx["facts"]) == ["Accessibility focus", "Performance audits"]
+    assert ctx["excluded_counts"] == {"pending_review": 1, "draft": 1, "rejected": 1, "disabled": 1}
+    extracted = client.get(
+        f"/api/v1/workspaces/{demo}/knowledge", params={"source_type": "extracted"}
+    ).json()
+    assert {i["status"] for i in extracted["items"]} == {"pending_review", "rejected"}
+    assert all(i["source_ref"] == "Demo resume.pdf (fictional)" for i in extracted["items"])

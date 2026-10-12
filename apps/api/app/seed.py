@@ -28,7 +28,10 @@ from app.db.models_crm import (
     Activity,
     Company,
     Contact,
+    FitScoringConfig,
+    ImportJob,
     KnowledgeItem,
+    KnowledgeItemVersion,
     Lead,
     LeadTag,
     Opportunity,
@@ -55,6 +58,7 @@ from app.db.models_workflow import (
     WorkflowVersion,
 )
 from app.security.passwords import hash_password
+from app.services.fit_scoring import DEFAULT_CRITERIA, ProfileFacts, Scorer
 from app.services.pipeline import ensure_default_stages
 from app.services.workflows import definition_checksum
 
@@ -112,60 +116,118 @@ def seed_demo(db: DbSession) -> tuple[bool, uuid.UUID | None]:
             ],
         )
     )
-    db.add(
-        FreelancerProfile(
-            workspace_id=wid,
-            role_title="Independent web developer (fictional)",
-            summary="Fictional demo persona. Builds fast, accessible marketing sites and small web apps.",
-            services=["Web development", "Performance audits", "Accessibility reviews"],
-            skills=["TypeScript", "React", "PostgreSQL", "Accessibility"],
-            target_clients="Seed-stage SaaS teams who need a reliable front-end partner.",
-            industries=["SaaS", "Fintech"],
-            portfolio_urls=["https://portfolio.alex-rivera.example/work"],
-            years_experience=8,
-            experience_summary="Fictional experience for demonstration only.",
-            tone="friendly",
-            business_goal="find_new_clients",
-        )
+    profile = FreelancerProfile(
+        workspace_id=wid,
+        role_title="Independent web developer (fictional)",
+        summary="Fictional demo persona. Builds fast, accessible marketing sites and small web apps.",
+        services=["Web development", "Performance audits", "Accessibility reviews"],
+        skills=["TypeScript", "React", "PostgreSQL", "Accessibility"],
+        target_clients="Seed-stage SaaS teams who need a reliable front-end partner.",
+        industries=["SaaS", "Fintech"],
+        portfolio_urls=["https://portfolio.alex-rivera.example/work"],
+        years_experience=8,
+        experience_summary="Fictional experience for demonstration only.",
+        tone="friendly",
+        business_goal="find_new_clients",
+        differentiators=[
+            "Fixed-scope audits (fictional)",
+            "Accessibility-first builds (fictional)",
+        ],
+        excluded_customers=["Gambling operators", "Anyone needing a rush job under one week"],
+        pricing_guidance="Fictional: quote after a discovery call; never state a number in a first email.",
+        preferred_cta="Book a 20-minute intro call (fictional)",
+        version=1,
     )
+    db.add(profile)
     stages = {s.key: s for s in ensure_default_stages(db, wid)}
 
-    # --- knowledge ---------------------------------------------------------------------------
-    for kind, title, content, status in (
+    # --- knowledge: one item per lifecycle state, each with a v1 history snapshot -----------------------
+    for kind, title, content, status, source, enabled in (
         (
             "service",
             "Performance audits",
             "Fictional: fixed-scope audits delivered in one week.",
             "approved",
+            "manual",
+            True,
         ),
-        ("fact", "Accessibility focus", "Fictional: all builds target WCAG 2.2 AA.", "approved"),
+        (
+            "fact",
+            "Accessibility focus",
+            "Fictional: all builds target WCAG 2.2 AA.",
+            "approved",
+            "manual",
+            True,
+        ),
+        (
+            "fact",
+            "Retired offering",
+            "Fictional: legacy WordPress maintenance (no longer offered).",
+            "approved",
+            "manual",
+            False,
+        ),
         (
             "case_study",
             "Case study (unreviewed)",
-            "Fictional draft extracted from a document.",
+            "Fictional draft extracted from a pasted document. Not verified.",
             "pending_review",
+            "extracted",
+            True,
+        ),
+        (
+            "fact",
+            "Work in progress",
+            "Fictional note the freelancer has not finished writing.",
+            "draft",
+            "manual",
+            True,
+        ),
+        (
+            "fact",
+            "Rejected claim",
+            "Fictional claim the freelancer decided not to use.",
+            "rejected",
+            "extracted",
+            True,
         ),
     ):
+        approved = status == "approved"
+        item = KnowledgeItem(
+            workspace_id=wid,
+            kind=kind,
+            title=title,
+            content=content,
+            source_type=source,
+            source_ref="Demo resume.pdf (fictional)" if source == "extracted" else None,
+            status=status,
+            is_enabled=enabled,
+            approved_at=now if approved else None,
+            approved_by_user_id=user.id if approved else None,
+            created_by_user_id=user.id,
+        )
+        db.add(item)
+        db.flush()
         db.add(
-            KnowledgeItem(
+            KnowledgeItemVersion(
                 workspace_id=wid,
+                item_id=item.id,
+                version=1,
                 kind=kind,
                 title=title,
                 content=content,
-                source_type="manual" if status == "approved" else "extracted",
-                status=status,
-                approved_at=now if status == "approved" else None,
-                approved_by_user_id=user.id if status == "approved" else None,
+                source_ref=item.source_ref,
+                changed_by_user_id=user.id,
             )
         )
 
     # --- companies & contacts (all .example) --------------------------------------------------
     companies: dict[str, Company] = {}
-    for key, name, industry in (
-        ("northwind", "Northwind Studio (fictional)", "Design"),
-        ("fabrikam", "Fabrikam Labs (fictional)", "SaaS"),
-        ("contoso", "Contoso Works (fictional)", "Fintech"),
-        ("tailspin", "Tailspin Co (fictional)", "E-commerce"),
+    for key, name, industry, size, place in (
+        ("northwind", "Northwind Studio (fictional)", "Design", "11-50", "Berlin, Germany"),
+        ("fabrikam", "Fabrikam Labs (fictional)", "SaaS", "11-50", "Remote (US)"),
+        ("contoso", "Contoso Works (fictional)", "Fintech", "201-1000", "London, UK"),
+        ("tailspin", "Tailspin Co (fictional)", "Gambling", "2-10", None),
     ):
         c = Company(
             workspace_id=wid,
@@ -174,6 +236,8 @@ def seed_demo(db: DbSession) -> tuple[bool, uuid.UUID | None]:
             domain_normalized=f"{key}.example",
             website=f"https://{key}.example",
             industry=industry,
+            size_label=size,
+            location=place,
             source="seed",
             source_retrieved_at=now,
             is_sample=True,
@@ -212,23 +276,54 @@ def seed_demo(db: DbSession) -> tuple[bool, uuid.UUID | None]:
     db.add_all(tags.values())
     db.flush()
     leads: dict[str, Lead] = {}
-    for key, status, stage, fit, why in (
+    criteria = [dict(c) for c in DEFAULT_CRITERIA]
+    by_key = {c["key"]: c for c in criteria}
+    by_key["service_match"]["keywords"] = ["website", "front-end", "landing page"]
+    by_key["geography"]["preferred"] = ["Remote", "Germany", "UK"]
+    by_key["company_size"]["preferred"] = ["2-10", "11-50", "51-200"]
+    db.add(
+        FitScoringConfig(workspace_id=wid, version=1, criteria=criteria, updated_by_user_id=user.id)
+    )
+    scorer = Scorer(
+        ProfileFacts(
+            services=tuple(profile.services),
+            skills=tuple(profile.skills),
+            industries=tuple(profile.industries),
+            excluded_customers=tuple(profile.excluded_customers),
+            version=profile.version,
+        ),
+        criteria,
+        1,
+    )
+    for key, status, stage, notes, budget in (
         (
             "northwind",
             "replied",
             "replied",
-            82,
-            "Strong service match; product team hiring front-end help.",
+            "Fictional: needs a front-end rebuild and an accessibility audit for their marketing site.",
+            "high",
         ),
         (
             "fabrikam",
             "qualified",
             "qualified",
-            91,
-            "SaaS, seed stage, accessibility requirement stated.",
+            "Fictional: seed-stage SaaS team with an accessibility requirement; web development help wanted.",
+            "medium",
         ),
-        ("contoso", "contacted", "contacted", 64, "Fintech fit; budget unknown."),
-        ("tailspin", "new", "new", 48, "Weak signals so far; needs research."),
+        (
+            "contoso",
+            "contacted",
+            "contacted",
+            "Fictional: exploring a website refresh. Budget unknown.",
+            None,
+        ),
+        (
+            "tailspin",
+            "new",
+            "new",
+            "Fictional: online gambling operator wants a new landing page.",
+            "low",
+        ),
     ):
         ld = Lead(
             workspace_id=wid,
@@ -238,21 +333,76 @@ def seed_demo(db: DbSession) -> tuple[bool, uuid.UUID | None]:
             title=f"{companies[key].name} website rebuild",
             status=status,
             source="seed",
+            source_retrieved_at=now,
             industry=companies[key].industry,
-            fit_score=fit,
-            fit_explanation={
-                "summary": why,
-                "criteria": {"service_match": fit >= 60, "evidence": "demo data"},
-            },
+            location=companies[key].location,
+            notes=notes,
+            budget_signal=budget,
             next_action="Follow up",
             next_action_at=now + timedelta(days=2),
             last_activity_at=now,
             owner_user_id=user.id,
             is_sample=True,
         )
+        scorer.apply(ld, companies[key])
         db.add(ld)
         leads[key] = ld
+    inbound = Lead(
+        workspace_id=wid,
+        stage_id=stages["new"].id,
+        title="Inbound inquiry (fictional)",
+        status="new",
+        source="seed",
+        source_retrieved_at=now,
+        owner_user_id=user.id,
+        last_activity_at=now,
+        is_sample=True,
+    )
+    scorer.apply(inbound, None)  # almost nothing is known, so no score is given
+    db.add(inbound)
+    leads["inbound"] = inbound
     db.flush()
+    for ld in leads.values():
+        db.add(
+            Activity(
+                workspace_id=wid,
+                lead_id=ld.id,
+                actor_user_id=None,
+                kind="system",
+                summary="Lead created (sample data)",
+                occurred_at=now - timedelta(days=3),
+            )
+        )
+    db.add(
+        ImportJob(
+            workspace_id=wid,
+            filename="sample-leads.csv (demo)",
+            duplicate_strategy="skip",
+            mapping={"name": "Name", "email": "Email", "company": "Company"},
+            total_rows=6,
+            created_count=4,
+            updated_count=0,
+            skipped_count=1,
+            error_count=1,
+            errors=[
+                {
+                    "row": 4,
+                    "column": "Email",
+                    "message": "Enter a valid email address.",
+                    "value": "not-an-email",
+                    "kind": "error",
+                },
+                {
+                    "row": 6,
+                    "column": "",
+                    "message": "A contact with sam@fabrikam.example already exists.",
+                    "value": "",
+                    "kind": "skipped",
+                },
+            ],
+            created_by_user_id=user.id,
+        )
+    )
     for lead_key, tag_names in (
         ("fabrikam", ["Priority", "SaaS"]),
         ("northwind", ["Warm intro"]),

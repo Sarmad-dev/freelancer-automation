@@ -143,6 +143,9 @@ function renderDetail(over: Over = {}) {
         stages={STAGES}
         companies={COMPANIES}
         contacts={CONTACTS}
+        deals={[]}
+        tasks={[]}
+        timezone="Europe/Berlin"
         canEdit
         now={NOW}
         {...over}

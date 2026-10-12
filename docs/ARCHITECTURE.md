@@ -48,6 +48,9 @@ http(s) in the browser (`lib/safe-url.ts`).
 ## Leads, scoring and import (MVP Prompt 6)
 `routers/leads|companies|contacts|fit_scoring|imports` call `services/crm.py` (companies/contacts: find-or-create, duplicates, serialisation), `services/leads.py` (lead rules, stage sync, timeline, tags), `services/fit_scoring.py` (pure scoring functions plus config persistence), `services/lead_import.py` and `services/csvio.py` (strict CSV reading/writing) and `services/lead_export.py`. Scoring, import and export are plain functions of the database and the request, so they run the same from an API call, a test, or later from the workflow engine. In the web app, `/leads` is a section with four tabs (Leads, Companies, Contacts, Fit scoring) plus detail pages and the import wizard; list pages are server components driven by validated URL parameters, so filters, sorting and pagination are links and work without JavaScript.
 
+## Pipeline, tasks and notifications (MVP Prompt 7)
+`routers/opportunities|tasks|notifications` (and `GET /pipeline/board`) call `services/opportunities.py` (deal rules, board aggregation), `services/tasks.py` (idempotent creation, state changes, views), `services/notifications.py` (lazy "due" notifications) and `services/times.py` (zone-aware instants and local-day bounds). On the web, `/pipeline` is a board (native drag and drop plus a keyboard-accessible Move control, optimistic with rollback) and a table; `/pipeline/{id}` is the deal; `/tasks` has the Overdue/Today/Upcoming/No date/Done views; the top-bar bell polls the unread count. `TaskDrawer` and `OpportunityFields` are shared by every page that creates or edits these records.
+
 ## Contracts
 FastAPI is the single source of truth. `pnpm contracts:generate` exports `packages/contracts/openapi.json`
 and regenerates `src/generated/api.d.ts` (openapi-typescript). The web app uses `openapi-fetch` through

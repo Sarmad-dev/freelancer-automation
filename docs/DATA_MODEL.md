@@ -91,3 +91,10 @@ Soft deletion is used only where users reasonably want records back; everything 
 - **Imports.** `import_jobs` keeps the file name, mapping (column names only), counts, and up to 1,000 per-row problems (row number, column, message, offending value truncated to 200 characters, and whether the row was an error or a skipped duplicate). The raw file is never stored.
 - **Archive, not delete.** Companies, contacts and leads are archived (`archived_at`); archived records are read-only until restored. Deleting a lead or workspace still cascades as described above.
 
+## Pipeline, tasks and notifications (MVP Prompt 7)
+No new tables: the model from Prompt 4 already had `opportunities`, `tasks`, `activities`, `notifications` and `pipeline_stages`; this phase adds the rules around them.
+- **Deals.** `status` (`open` / `won` / `lost`) follows the stage (the won and lost stages close a deal, setting `closed_at`); `loss_reason` exists only on lost deals; `probability` is nullable and never defaulted; `value_amount` is `NUMERIC(14,2)` with a 3-letter `currency`. Deals reference their lead and stage through composite tenant keys.
+- **Timeline.** A deal's activities carry both `opportunity_id` and the lead's `lead_id`, so they appear on the deal and on the lead.
+- **Tasks.** `due_at` / `remind_at` are UTC instants; `due_timezone` is the zone they were meant in. `idempotency_key` is unique per workspace. A task may link to a lead, a deal and/or a conversation (the deal's lead is filled in automatically; inconsistent links are refused). Deleting a lead or deal deletes its tasks.
+- **Notifications.** One row per (user, `dedupe_key`); task notifications use `task:<id>:<due|remind>:<epoch>` so rescheduling creates a new notification instead of colliding. `link` is a relative path only.
+

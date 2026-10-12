@@ -24,9 +24,12 @@ from app.routers import (
     imports,
     knowledge,
     leads,
+    notifications,
+    opportunities,
     pipeline,
     profile,
     tags,
+    tasks,
     workspaces,
 )
 from app.security.credentials import build_store
@@ -131,6 +134,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(leads.router)
     app.include_router(fit_scoring.router)
     app.include_router(imports.router)
+    app.include_router(opportunities.router)
+    app.include_router(tasks.router)
+    app.include_router(notifications.router)
     return app
 
 

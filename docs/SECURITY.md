@@ -127,6 +127,9 @@ get read access. Audit details for these actions are limited to field *names*, c
 ## CSV import and export
 Imports accept only data in the file the user chose; nothing is fetched. Files are size/row/column limited, parsed strictly (a malformed quote is an error, not silently swallowed data) and every cell is validated like the equivalent form field (email, public website, phone, lengths, control and invisible characters). Preview and import are owner-only. The raw file is never stored; the import record keeps counts and a capped list of row problems, and its audit event only carries counts. Exports and error reports are owner-only, audited by count, capped, served with `no-store`/`nosniff`, and neutralise spreadsheet formulas in every cell. Do-not-contact is derived from the suppression list and is shown on leads and contacts and in imports; nothing in this phase sends email.
 
+## Pipeline, tasks and notifications
+Deal and task writes are owner-only and workspace-scoped (stages, leads, deals and conversations a request refers to must belong to the workspace; the database also refuses cross-tenant links). Audit events for stage moves carry only the destination stage key; task events carry no titles or descriptions. Notifications are per user: another member of the same workspace cannot read or mark them, and notification links are relative paths only (validated on the server and again in the browser). Task creation is idempotent by key so retries cannot duplicate records.
+
 ## Known gaps (tracked)
 
 - **No email verification yet** (`email_verified_at` is always null). Consequently sign-up reveals whether an

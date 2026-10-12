@@ -68,11 +68,13 @@ def add_activity(
     actor: bool = True,
     bump: bool = True,
     when: datetime | None = None,
+    opportunity_id: uuid.UUID | None = None,
 ) -> Activity:
     now = when or utcnow()
     activity = Activity(
         workspace_id=ctx.workspace_id,
         lead_id=lead.id,
+        opportunity_id=opportunity_id,
         actor_user_id=ctx.user.id if actor else None,
         kind=kind,
         summary=summary[:500],

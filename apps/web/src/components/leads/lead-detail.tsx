@@ -21,6 +21,9 @@ import { describeFailure, type MutationFailure } from "@/lib/mutation-error";
 import { FitBreakdown } from "./fit-breakdown";
 import { DoNotContactBadge, FitBadge, SampleBadge, StatusBadge } from "./lead-badges";
 import { LeadEditDrawer } from "./lead-edit-drawer";
+import { LeadWork } from "./lead-work";
+import type { OpportunityOut } from "@/components/pipeline/pipeline-model";
+import type { TaskOut } from "@/components/tasks/task-model";
 import { LeadTimeline } from "./lead-timeline";
 import {
   BUDGETS,
@@ -62,6 +65,9 @@ export function LeadDetail({
   stages,
   companies,
   contacts,
+  deals,
+  tasks,
+  timezone,
   canEdit,
   now,
 }: {
@@ -72,6 +78,10 @@ export function LeadDetail({
   stages: StageOut[];
   companies: CompanyOut[];
   contacts: ContactOut[];
+  deals: OpportunityOut[];
+  tasks: TaskOut[];
+  /** Zone used to show new tasks' times (the workspace's). */
+  timezone: string;
   canEdit: boolean;
   /** ISO time from the server, so "overdue" is computed the same on server and client. */
   now: string;
@@ -424,6 +434,17 @@ export function LeadDetail({
               </p>
             </div>
           </section>
+
+          <LeadWork
+            workspaceId={workspaceId}
+            leadId={lead.id}
+            leadTitle={lead.title}
+            deals={deals}
+            tasks={tasks}
+            stages={stages}
+            timezone={timezone}
+            canEdit={editable}
+          />
 
           <TagsSection
             key={lead.tags.map((t) => t.id).join(",")}

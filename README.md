@@ -49,6 +49,12 @@ scores come from criteria you set at `/leads/scoring`: rule-based, explained cri
 "not enough information" when the data isn't there. Imports and exports are owner-only; exported CSVs neutralise spreadsheet
 formulas. Nothing is scraped or fetched: only data you type or upload is used.
 
+## Pipeline and tasks
+`/pipeline` is a board and a table of your deals (create them from a lead). Drag a card to another stage, or use its "Move to…" menu
+(keyboard and screen-reader friendly); winning or losing asks you to confirm and, for a loss, why. `/tasks` shows what is overdue,
+due today, upcoming or undated in the time zone you choose; due times mean that zone's clock even across daylight-saving changes.
+The bell in the top bar shows reminders and due tasks. Calendar sync is not connected, so no calendar events are shown.
+
 ## Scripts
 | Command | Purpose |
 |---|---|

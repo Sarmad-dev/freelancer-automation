@@ -1,6 +1,57 @@
 # Implementation status
 
-_Last updated: MVP Prompt 6 (leads, contacts, companies, CSV import and fit scoring)._
+_Last updated: MVP Prompt 7 (pipeline, tasks and activity timeline)._
+
+## Completed — MVP Prompt 7: pipeline, tasks and activity timeline
+- **API** (owner writes, members read; workspace-scoped, audited): `opportunities` list/create/edit, `move` and `reopen`, deal
+  timeline (notes, calls, meetings; also shown on the lead); `GET /pipeline/board` (every stage with its deals, counts and
+  per-currency totals); `tasks` list by view (overdue / today / upcoming / no date / done), summary counts, create (idempotent),
+  edit, complete / reopen / dismiss, reschedule, snooze; `notifications` (list, unread count, mark read, mark all read).
+- **Stage rules** (D37, D38): unknown or foreign stages are refused, closed deals must be reopened, a stale board cannot overwrite
+  a newer move (`expected_stage_id` → 409 `stale_stage`), winning/losing closes the deal, a loss reason is recorded.
+- **Money** (D39): exact decimals, per-currency totals, probability never guessed; a column with no probabilities shows no weighted figure.
+- **Time** (D40): due times resolve in the zone they were meant in (skipped hour refused, repeated hour = first occurrence);
+  views use the local day (23/25-hour days handled); overdue / today / upcoming never overlap.
+- **Tasks from anywhere** (D41): lead, deal or conversation links validated (the deal's lead is filled in); creation is idempotent
+  by key (double click, retry and race safe); creating/completing a task is written to the lead's timeline.
+- **Notifications** (D42): "task due" and "task reminder" notifications are produced when notifications are read, deduplicated,
+  settled when the task is completed, dismissed or rescheduled. Personal to each user; links are relative paths only.
+- **Web:** `/pipeline` board (native drag and drop **and** an equal keyboard/screen-reader "Move to…" control, confirmation for won/lost with a loss
+  reason, optimistic moves with exact rollback, live-region announcements) and table; `/pipeline/{id}` deal page (summary, move/reopen,
+  edit, timeline, tasks); `/tasks` with the five views, time-zone control, complete / reschedule / snooze / dismiss / edit; a
+  notification bell in the top bar; deals and follow-ups on each lead. Shared `TaskDrawer` and `OpportunityFields`.
+- **Seed:** four deals (open in two currencies, one without a probability, one lost with a reason) and five tasks (overdue,
+  due soon, later, undated, done).
+- **New dependency:** `tzdata` (installed into `apps/api/.venv` with `uv add`) so time zones work on minimal systems.
+
+## Verification: MVP Prompt 7
+- API: 1,007 pytest tests pass on **SQLite, PostgreSQL 16 and Python 3.12/3.13**; ruff and mypy (strict) clean. New: 23 time-zone tests
+  (DST gaps and repeats, 23/25-hour days, zone-dependent "today"), 57 deal tests (validation, every stage-move rule, stale board,
+  closed deals, reopen, board totals, tenant isolation, member read-only), 61 task tests (idempotency incl. a simulated race,
+  zone boundaries on a frozen clock, views, actions, links, permissions), 18 notification tests (once-only, settle on complete/
+  reschedule, snooze, cap, personal scope), seed checks.
+- Mutation checks (each made tests fail): unscoped stage lookup, stale-stage check off, closed deals movable, board mixing
+  currencies, idempotency off, skipped hour accepted, "today" always UTC, overdue boundary off by one, unscoped task link,
+  notifications for everyone, completing not settling notifications. (Removing the application-level dedupe lookup is harmless: the
+  database's unique key still enforces once-only.)
+- Web: 677 vitest tests (44 files) including drag-and-drop simulations, optimistic rollback, double-submit, axe on every view and
+  dialog. Lint, typecheck, format and production build pass.
+- Real browser (Chromium via Playwright): axe (incl. contrast) clean on every pipeline/tasks/lead page at 1440/820/390 px in dark and
+  light themes; end-to-end checked against the database: real drag-and-drop, the Move control, cancel/confirm for won, loss reason,
+  a stale board refused after another change, notes/edits/tasks on a deal, a double-clicked "Add task" creating one task, the skipped
+  hour refused with a clear message, complete from the list, the bell showing due/reminder notifications and marking them read.
+- Bugs found in the browser and fixed: the board's hidden text escaped its scroll box and made the page scroll sideways (the same
+  class of bug as before); "≈ $0.00 weighted" was shown for deals with no probability (now omitted).
+
+## Not verified / known gaps (Prompt 7)
+- Dragging deals inside a column (ordering) isn't supported: a card's position is by last update. Moving between columns only.
+- "Today" for the overdue badge on a deal's close date uses the server's UTC date, which can differ from the viewer's date near midnight.
+- No calendar: the Tasks page says so; calendar events need a connected calendar (later).
+- Reminders are in-app only and appear when the app polls (about once a minute while a tab is open); push/email reminders need the job runner.
+- Notification preferences and a full notification page arrive with the dashboard work (Prompt 15).
+- Tasks have a single assignee (the owner); dismissed tasks have no tab; conversation links are accepted by the API but there is no inbox yet to create them from.
+- Deals have no delete (mark them lost); they are not archived; there is no deal-level proposal yet.
+- Board columns show the 50 newest deals (the rest are reachable in the table view).
 
 ## Completed — MVP Prompt 6: leads, contacts, companies, CSV import and fit scoring
 - **API** (owner writes, members read; all workspace-scoped; see [API_CONVENTIONS.md](API_CONVENTIONS.md)):
@@ -244,7 +295,7 @@ JS: lint, typecheck, vitest (workflow-core 8, ui 5, contracts 1, web 5), `next b
 - No authentication, tenancy, business entities, worker or queue (later phases). 
 
 ## Next
-MVP Prompt 7 — pipeline, tasks and activity timeline (see the playbook).
+MVP Prompt 8 — AI provider abstraction and safe structured outputs (see the playbook).
 
 ## Commands
 See the README. Migrations: `pnpm db:migrate`, rollback one step: `pnpm db:downgrade`.

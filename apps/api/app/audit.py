@@ -33,6 +33,10 @@ ALLOWED_DETAIL_KEYS = frozenset(
         "skipped",
         "errors",
         "strategy",
+        # Stage keys and task-view names are fixed vocabulary, not user content (MVP Prompt 7).
+        "from",
+        "to",
+        "view",
     }
 )
 

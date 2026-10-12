@@ -54,3 +54,8 @@ Timestamps are ISO-8601 UTC instants; a `*_timezone` field carries the user's in
 ## CSV endpoints
 `GET .../leads/export` and `GET .../imports/{id}/errors.csv` return `text/csv; charset=utf-8` with a UTF-8 BOM (so spreadsheet apps read accents correctly), `Content-Disposition: attachment`, `Cache-Control: no-store` and `X-Content-Type-Options: nosniff`. Cells that could be read as formulas are prefixed with `'`. Both are owner-only. Imports are JSON (`{content, mapping, duplicate_strategy, filename}`) rather than multipart: the browser reads the file, the API never sees a file upload, and the typed client can call it.
 
+## Idempotent creates and time
+- **Idempotency.** `POST /tasks` accepts `idempotency_key` (8-100 chars: letters, digits, `. _ : -`). The same key returns the original resource with `200`; the same key with a different payload is `409 idempotency_conflict`. Keys are per workspace.
+- **Times.** Instants are ISO-8601 in UTC. For input, a value with an offset/`Z` is an exact instant; a value without one is wall-clock time in the accompanying IANA zone (`due_timezone`, default: the workspace's). A wall-clock time that doesn't exist is `422` on that field. Views that depend on "today" take `tz` and say which zone they used.
+- **Compare-and-set.** Where a stale client could overwrite a newer change (deal moves), the request carries what the client believes the current state is and a mismatch is `409`.
+

@@ -166,3 +166,30 @@ def test_demo_profile_and_knowledge_cover_every_review_state(
     ).json()
     assert {i["status"] for i in extracted["items"]} == {"pending_review", "rejected"}
     assert all(i["source_ref"] == "Demo resume.pdf (fictional)" for i in extracted["items"])
+
+
+def test_demo_pipeline_and_tasks_cover_the_interesting_states(
+    db: DbSession, demo: uuid.UUID
+) -> None:
+    from app.db.models_crm import Opportunity, PipelineStage, Task
+
+    stages = {
+        s.id: s for s in db.scalars(select(PipelineStage).where(PipelineStage.workspace_id == demo))
+    }
+    opps = db.scalars(select(Opportunity).where(Opportunity.workspace_id == demo)).all()
+    assert {o.status for o in opps} == {"open", "lost"} and {o.currency for o in opps} == {
+        "USD",
+        "EUR",
+    }
+    assert any(
+        o.probability is None and o.status == "open" for o in opps
+    )  # a probability is never guessed
+    lost = next(o for o in opps if o.status == "lost")
+    assert stages[lost.stage_id].is_lost and lost.loss_reason and lost.closed_at
+    assert all(not stages[o.stage_id].is_lost for o in opps if o.status == "open")
+    tasks = db.scalars(select(Task).where(Task.workspace_id == demo)).all()
+    assert {t.status for t in tasks} == {"open", "done"} and any(t.due_at is None for t in tasks)
+    assert all(t.is_sample for t in tasks) and all(
+        t.completed_at for t in tasks if t.status == "done"
+    )
+    assert any(t.opportunity_id for t in tasks)

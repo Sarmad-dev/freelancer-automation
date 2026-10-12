@@ -14,6 +14,7 @@ from app import __version__
 from app.ai.factory import build_provider
 from app.config import Settings, get_settings
 from app.errors import install_error_handlers
+from app.mailbox.registry import build_registry
 from app.mailer import ConsoleMailer, DisabledMailer, Mailer
 from app.ratelimit import MemoryRateLimiter, RateLimiter, RedisRateLimiter
 from app.routers import (
@@ -21,6 +22,9 @@ from app.routers import (
     auth,
     companies,
     contacts,
+    drafts,
+    email,
+    email_oauth,
     fit_scoring,
     health,
     imports,
@@ -30,6 +34,7 @@ from app.routers import (
     opportunities,
     pipeline,
     profile,
+    suppressions,
     tags,
     tasks,
     workspaces,
@@ -85,6 +90,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.rate_limiter = limiter
     app.state.mailer = mailer
     app.state.ai_provider = build_provider(settings)
+    app.state.mailbox = build_registry(settings)
     app.state.credentials = build_store(settings.credential_encryption_keys)
     install_error_handlers(app)
 
@@ -141,6 +147,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(tasks.router)
     app.include_router(notifications.router)
     app.include_router(ai.router)
+    app.include_router(email.router)
+    app.include_router(email_oauth.router)
+    app.include_router(drafts.router)
+    app.include_router(suppressions.router)
     return app
 
 

@@ -90,6 +90,24 @@ class Settings(BaseSettings):
         default=None, ge=0, alias="AI_OUTPUT_COST_MICROS_PER_1K"
     )
 
+    # --- Email providers (MVP Prompt 9). Gmail is "configured" only when both the client id and secret are set. ---
+    google_client_id: str = Field(default="", alias="GOOGLE_CLIENT_ID")
+    google_client_secret: SecretStr = Field(default=SecretStr(""), alias="GOOGLE_CLIENT_SECRET")
+    # Must match an "Authorized redirect URI" of the Google OAuth client exactly. Default: the web app's proxy path.
+    google_redirect_uri: str = Field(default="", alias="GOOGLE_REDIRECT_URI")
+    email_http_timeout_seconds: float = Field(
+        default=15.0, gt=0, le=60, alias="EMAIL_HTTP_TIMEOUT_SECONDS"
+    )
+    # Pages of threads fetched per sync run (the rest continues on the next run).
+    email_sync_max_pages: int = Field(default=5, ge=1, le=50, alias="EMAIL_SYNC_MAX_PAGES")
+    # Approved messages one workspace may send per hour / per day (a safety limit on top of the provider's own).
+    email_send_limit_per_hour: int = Field(
+        default=20, ge=1, le=10_000, alias="EMAIL_SEND_LIMIT_PER_HOUR"
+    )
+    email_send_limit_per_day: int = Field(
+        default=100, ge=1, le=100_000, alias="EMAIL_SEND_LIMIT_PER_DAY"
+    )
+
     @field_validator("database_url")
     @classmethod
     def _check_database_url(cls, value: str) -> str:
@@ -140,6 +158,20 @@ class Settings(BaseSettings):
                 raise ValueError(
                     "RATE_LIMIT_BACKEND=memory is not allowed in production (use redis)"
                 )
+        if bool(self.google_client_id.strip()) != bool(
+            self.google_client_secret.get_secret_value()
+        ):
+            raise ValueError("GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be set together")
+        if self.google_redirect_uri and not self.google_redirect_uri.startswith(
+            ("https://", "http://")
+        ):
+            raise ValueError("GOOGLE_REDIRECT_URI must be an http(s) URL")
+        if (
+            self.app_env == "production"
+            and self.google_client_id
+            and not self.effective_google_redirect_uri.startswith("https://")
+        ):
+            raise ValueError("The Google redirect URI must use https in production")
         if self.effective_ai_provider == "gateway":
             problems = []
             if not self.ai_base_url.startswith(("https://", "http://")):
@@ -155,6 +187,17 @@ class Settings(BaseSettings):
             if self.app_env == "production" and not self.ai_base_url.startswith("https://"):
                 raise ValueError("AI_BASE_URL must use https in production")
         return self
+
+    @property
+    def gmail_configured(self) -> bool:
+        return bool(self.google_client_id.strip() and self.google_client_secret.get_secret_value())
+
+    @property
+    def effective_google_redirect_uri(self) -> str:
+        return (
+            self.google_redirect_uri
+            or f"{self.web_base_url.rstrip('/')}/api/v1/email/oauth/callback"
+        )
 
     @property
     def effective_ai_provider(self) -> str:

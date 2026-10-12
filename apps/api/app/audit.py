@@ -37,6 +37,12 @@ ALLOWED_DETAIL_KEYS = frozenset(
         "from",
         "to",
         "view",
+        # Fixed vocabulary for email accounts and sending (MVP Prompt 9): provider keys, states, counts. Never addresses
+        # or content.
+        "provider",
+        "state",
+        "messages",
+        "conversations",
     }
 )
 

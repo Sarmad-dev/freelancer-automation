@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 from alembic.autogenerate import compare_metadata
 from alembic.migration import MigrationContext
+from cryptography.fernet import Fernet
 
 from app.audit import ALLOWED_DETAIL_KEYS, record
 from app.config import ConfigError, load_settings
@@ -78,6 +79,7 @@ def test_public_url_validation(url: str, ok: bool) -> None:
         ({"COOKIE_SECURE": "false"}, "COOKIE_SECURE"),
         ({"MAIL_BACKEND": "console"}, "MAIL_BACKEND"),
         ({"RATE_LIMIT_BACKEND": "memory"}, "RATE_LIMIT_BACKEND"),
+        ({"CREDENTIAL_ENCRYPTION_KEYS": ""}, "CREDENTIAL_ENCRYPTION_KEYS"),
     ],
 )
 def test_production_refuses_insecure_auth_settings(
@@ -85,6 +87,7 @@ def test_production_refuses_insecure_auth_settings(
 ) -> None:
     monkeypatch.setenv("APP_ENV", "production")
     monkeypatch.setenv("APP_SECRET_KEY", "x" * 48)
+    monkeypatch.setenv("CREDENTIAL_ENCRYPTION_KEYS", f"v1:{Fernet.generate_key().decode()}")
     for k, v in env.items():
         monkeypatch.setenv(k, v)
     with pytest.raises(ConfigError, match=needle):
@@ -94,6 +97,7 @@ def test_production_refuses_insecure_auth_settings(
 def test_production_defaults_are_secure(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("APP_ENV", "production")
     monkeypatch.setenv("APP_SECRET_KEY", "x" * 48)
+    monkeypatch.setenv("CREDENTIAL_ENCRYPTION_KEYS", f"v1:{Fernet.generate_key().decode()}")
     s = load_settings()
     assert (
         s.secure_cookies

@@ -31,6 +31,12 @@ proxy (`/api/v1/*`) so the HttpOnly session cookie is first-party. Full details,
 [SECURITY.md](SECURITY.md). Workspace-scoped routes live under `/api/v1/workspaces/{id}/...` and are
 authorised by membership. Error responses use one envelope, `{"error": {"code", "message", "fields?"}}`.
 
+## Data model and API foundations (MVP Prompt 4)
+35 tenant-aware tables; tenancy is enforced by the database (composite `(workspace_id, id)` foreign keys, cascades,
+unique constraints) as well as by code. Secrets live only in an encrypted credential store. List endpoints share one
+pagination/sorting/filter contract and error envelope. Full details: [DATA_MODEL.md](DATA_MODEL.md),
+[API_CONVENTIONS.md](API_CONVENTIONS.md).
+
 ## Contracts
 FastAPI is the single source of truth. `pnpm contracts:generate` exports `packages/contracts/openapi.json`
 and regenerates `src/generated/api.d.ts` (openapi-typescript). The web app uses `openapi-fetch` through
@@ -45,8 +51,7 @@ per-package build step.
 
 ## Database
 SQLAlchemy 2.0 declarative models with deterministic constraint names; Alembic migrations in
-`apps/api/alembic/versions`. The scaffold has one table, `app_metadata`, used by seeding and migration tests.
-Domain entities arrive in MVP Prompt 4.
+`apps/api/alembic/versions`. Migrations `0001`-`0003` create the scaffold, identity/onboarding and the full MVP domain (see DATA_MODEL.md).
 
 ## Known limitations
 - Docker Compose provides PostgreSQL and Redis only; app containers are not provided yet.

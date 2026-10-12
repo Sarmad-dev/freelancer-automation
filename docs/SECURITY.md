@@ -96,6 +96,15 @@ membership, but the schema supports many workspaces per user and many users per 
 - Tests: `tests/test_onboarding.py::TestWorkspaceIsolation` (read/write/skip/complete/demo with a second
   real user, indistinguishable 404s, per-workspace profile storage).
 
+## Secrets at rest (credential store)
+
+OAuth tokens and API keys never appear in general tables (a schema test fails if a column even looks like one).
+They are stored via `app/security/credentials.py`: Fernet authenticated encryption, per-row `key_id` for rotation, the
+`workspace_id`/`purpose` sealed inside the ciphertext and verified on read, reads scoped by workspace. Keys come from
+`CREDENTIAL_ENCRYPTION_KEYS` (required in production; dev falls back to an ephemeral key and logs a warning). Details and
+rotation steps: [DATA_MODEL.md](DATA_MODEL.md#credentials). Known gap: keys live in the process environment; a KMS-backed
+store is the production hardening step.
+
 ## Audit trail
 
 `audit_events` rows are written in the same transaction as the change: `auth.sign_up`, `auth.sign_in`,

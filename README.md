@@ -4,7 +4,7 @@ AI-assisted CRM and visual workflow automation for independent freelancers (work
 Blueprint and build prompts: [`freelancer_os_build_prompt_playbook.md`](freelancer_os_build_prompt_playbook.md).
 Project docs: [`docs/`](docs).
 
-> Status: MVP Prompts 1-3 done (scaffold, design system/app shell, authentication + onboarding).
+> Status: MVP Prompts 1-4 done (scaffold, design system/app shell, authentication + onboarding, data model).
 > Everything else in the app is a clearly-marked placeholder.
 
 ## Prerequisites
@@ -20,7 +20,7 @@ pnpm install
 
 pnpm db:up                     # PostgreSQL + Redis via Docker Compose
 pnpm db:migrate                # apply migrations to an empty database
-pnpm db:seed                   # optional, idempotent dev seed
+pnpm db:seed                   # optional, idempotent: fictional demo freelancer + sample data
 
 pnpm dev:api                   # http://localhost:8000  (docs at /docs)
 pnpm dev                       # http://localhost:3000  (second terminal)
@@ -29,8 +29,10 @@ Verify: `curl localhost:8000/health`, `curl localhost:8000/ready`, `curl localho
 http://localhost:3000 — the page should report API connectivity as **Connected**.
 
 ## Authentication (development)
-Sign up at http://localhost:3000/sign-up (creates your personal workspace, then the onboarding wizard).
-There are **no seeded users or default credentials**. Password reset works in development without email:
+Sign up at http://localhost:3000/sign-up (creates your personal workspace, then the onboarding wizard), or run
+`pnpm db:seed` and sign in as the fictional demo account `demo@freelancer-os.example` with the **development-only**
+password `demo passphrase 2026`. The seed refuses to run unless `APP_ENV` is `development` or `test`, and every
+company, contact and address in it uses reserved `.example` names. Real deployments have no seeded users. Password reset works in development without email:
 the API (`MAIL_BACKEND=console`) prints the reset link to its log. In production password reset is
 disabled until a mail provider exists. See [docs/SECURITY.md](docs/SECURITY.md) for how sessions, CSRF,
 rate limiting and workspace isolation work, and the known gaps.
@@ -68,6 +70,11 @@ TEST_DATABASE_URL=postgresql://freelancer:freelancer@localhost:5432/freelancer_o
 ## Secrets
 No secrets are committed. `.env` is git-ignored; `.env.example` contains names and safe placeholders only.
 Production requires a random `APP_SECRET_KEY` (the API refuses to start otherwise).
+
+## Data model and API conventions
+- [docs/DATA_MODEL.md](docs/DATA_MODEL.md): entities, tenancy rules, retention/deletion, migration rollback, evolution path.
+- [docs/API_CONVENTIONS.md](docs/API_CONVENTIONS.md): URLs, errors, pagination/sorting/filtering, writes, adding a resource.
+- Browse the live API at http://localhost:8000/docs (development).
 
 ## Layout
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).

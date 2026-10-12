@@ -87,3 +87,21 @@ def make_user(client: TestClient, *, name: str = "Ada Lovelace", password: str =
         "me": body,
         "workspace_id": body["workspaces"][0]["id"],
     }
+
+
+def reset_demo(db: DbSession) -> None:
+    """Remove the seeded demo account/workspace so a test can seed from scratch (tests share one database)."""
+    from sqlalchemy import select
+
+    from app.db.models import Membership, User, Workspace
+    from app.seed import DEMO_EMAIL
+
+    user = db.scalar(select(User).where(User.email_normalized == DEMO_EMAIL))
+    if user is None:
+        return
+    for ws_id in db.scalars(
+        select(Membership.workspace_id).where(Membership.user_id == user.id)
+    ).all():
+        db.delete(db.get(Workspace, ws_id))
+    db.delete(user)
+    db.commit()

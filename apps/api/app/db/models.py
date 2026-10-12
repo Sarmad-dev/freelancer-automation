@@ -1,7 +1,9 @@
 """ORM models.
 
-Auth and onboarding (MVP Prompt 3): User, Workspace, Membership, Session, PasswordResetToken,
-AuditEvent, FreelancerProfile, OnboardingProgress. Further business entities arrive in MVP Prompt 4.
+Identity and tenancy (MVP Prompt 3): User, Workspace, Membership, Session, PasswordResetToken,
+AuditEvent, FreelancerProfile, OnboardingProgress. The business domain (CRM, email, workflow) lives in
+``models_crm``, ``models_email`` and ``models_workflow`` and is imported below so every table registers
+on one metadata object.
 
 Tenancy: every tenant-owned table carries ``workspace_id``. Membership links users to workspaces with a
 role so organisations can be added later; the MVP only creates ``owner`` memberships.
@@ -29,10 +31,8 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.clock import utcnow
 from app.db.base import Base
-
-
-def _uuid() -> uuid.UUID:
-    return uuid.uuid4()
+from app.db.mixins import Timestamps as _Timestamps
+from app.db.mixins import new_uuid as _uuid
 
 
 class AppMetadata(Base):
@@ -40,15 +40,6 @@ class AppMetadata(Base):
 
     key: Mapped[str] = mapped_column(String(100), primary_key=True)
     value: Mapped[str] = mapped_column(String(500), nullable=False)
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False
-    )
-
-
-class _Timestamps:
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=utcnow, nullable=False
-    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False
     )
@@ -68,7 +59,10 @@ class User(_Timestamps, Base):
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     last_sign_in_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
-    memberships: Mapped[list[Membership]] = relationship(back_populates="user")
+    # passive_deletes: let the database cascade (ON DELETE CASCADE) instead of the ORM nulling child keys.
+    memberships: Mapped[list[Membership]] = relationship(
+        back_populates="user", passive_deletes=True
+    )
 
 
 class Workspace(_Timestamps, Base):
@@ -81,7 +75,9 @@ class Workspace(_Timestamps, Base):
     # Demo mode = the user chose to explore with sample data / without connecting real accounts.
     demo_mode: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
-    memberships: Mapped[list[Membership]] = relationship(back_populates="workspace")
+    memberships: Mapped[list[Membership]] = relationship(
+        back_populates="workspace", passive_deletes=True
+    )
 
 
 class Membership(_Timestamps, Base):
@@ -200,3 +196,8 @@ class OnboardingProgress(_Timestamps, Base):
     current_step: Mapped[str] = mapped_column(String(30), nullable=False, default="role")
     completed_steps: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+# Register the remaining domain tables (import side effect). Keep at the bottom: they reference
+# ``workspaces`` and ``users`` above by name.
+from app.db import models_crm, models_email, models_workflow  # noqa: E402,F401

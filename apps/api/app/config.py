@@ -54,6 +54,10 @@ class Settings(BaseSettings):
     rate_limit_backend: Literal["memory", "redis"] | None = Field(
         default=None, alias="RATE_LIMIT_BACKEND"
     )
+    # Fernet keys for the credential store as "id:key[,id:key...]"; the FIRST entry encrypts new secrets and
+    # older ones stay readable (rotation). Required in production; dev/test fall back to an ephemeral key.
+    # Generate: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+    credential_encryption_keys: str = Field(default="", alias="CREDENTIAL_ENCRYPTION_KEYS")
     # "console" prints reset links (development only). "disabled" turns password reset off.
     mail_backend: Literal["console", "disabled"] | None = Field(default=None, alias="MAIL_BACKEND")
 
@@ -92,6 +96,12 @@ class Settings(BaseSettings):
                 raise ValueError("COOKIE_SECURE must not be false in production")
             if self.effective_mail_backend == "console":
                 raise ValueError("MAIL_BACKEND=console is for development only")
+            if not self.credential_encryption_keys.strip():
+                raise ValueError(
+                    "CREDENTIAL_ENCRYPTION_KEYS must be set in production (format 'v1:<fernet key>'; "
+                    'generate with: python -c "from cryptography.fernet import Fernet; '
+                    'print(Fernet.generate_key().decode())")'
+                )
             if self.effective_rate_limit_backend == "memory":
                 raise ValueError(
                     "RATE_LIMIT_BACKEND=memory is not allowed in production (use redis)"

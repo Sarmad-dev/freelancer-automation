@@ -8,6 +8,11 @@ export type MeResponse = components["schemas"]["MeResponse"];
 export type WorkspaceOut = components["schemas"]["WorkspaceOut"];
 export type OnboardingState = components["schemas"]["OnboardingState"];
 export type ErrorBody = components["schemas"]["ErrorBody"];
+export type TagOut = components["schemas"]["TagOut"];
+export type TagCreate = components["schemas"]["TagCreate"];
+export type PipelineStageOut = components["schemas"]["PipelineStageOut"];
+/** Every list endpoint returns this envelope (see docs/API_CONVENTIONS.md). */
+export type Page<T> = { items: T[]; total: number; limit: number; offset: number };
 
 /**
  * Typed API client. The types are generated from the FastAPI OpenAPI document

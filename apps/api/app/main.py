@@ -15,7 +15,8 @@ from app.config import Settings, get_settings
 from app.errors import install_error_handlers
 from app.mailer import ConsoleMailer, DisabledMailer, Mailer
 from app.ratelimit import MemoryRateLimiter, RateLimiter, RedisRateLimiter
-from app.routers import auth, health, workspaces
+from app.routers import auth, health, pipeline, tags, workspaces
+from app.security.credentials import build_store
 from app.security.csrf import CSRF_HEADER, is_request_allowed
 
 logger = logging.getLogger("freelancer_os")
@@ -65,6 +66,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     app.state.rate_limiter = limiter
     app.state.mailer = mailer
+    app.state.credentials = build_store(settings.credential_encryption_keys)
     install_error_handlers(app)
 
     @app.middleware("http")
@@ -107,6 +109,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(health.router)
     app.include_router(auth.router)
     app.include_router(workspaces.router)
+    app.include_router(tags.router)
+    app.include_router(pipeline.router)
     return app
 
 

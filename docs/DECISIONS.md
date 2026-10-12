@@ -72,3 +72,35 @@ session was still valid. See SECURITY.md.
 Onboarding answers write straight into `freelancer_profiles` (extended in MVP Prompt 5); `onboarding_progress`
 tracks status/steps. List-shaped answers are JSON columns for now (portable across SQLite/PostgreSQL); revisit
 if they need querying. Resume point is computed from completed steps, not trusted from the client.
+
+## D17 — Tenant isolation enforced in the database, not only in code
+Every tenant-to-tenant foreign key is composite `(workspace_id, id)`, so a cross-workspace reference is
+impossible even if application code is wrong. Cost: a `UNIQUE(workspace_id, id)` on referenced tables and
+slightly wider keys. Guarded by structural tests that also cover future tables. Rejected alternative: Postgres
+row-level security (stronger for ad-hoc SQL, but harder to run identically on SQLite and to test; revisit for teams).
+
+## D18 — String columns + CHECK constraints instead of native enums
+Portable across PostgreSQL/SQLite, readable in migrations, and changing the allowed values is a one-statement
+revision. Values live in `app/domain.py`.
+
+## D19 — UUIDv4 primary keys
+Unguessable in URLs, generatable in workers, no coordination. Time-ordered ids (ULID/UUIDv7) can be adopted later by
+changing `mixins.new_uuid` only.
+
+## D20 — Credential store behind a protocol; Fernet in the database for the MVP
+Meets "no raw tokens in general tables" now; envelope binds ciphertext to workspace + purpose; key rotation supported.
+Production hardening is swapping in KMS/Vault behind `CredentialStore`.
+
+## D21 — Message metadata only
+No body column yet: privacy by default and a retention decision is needed first (MVP Prompt 10).
+
+## D22 — Workflow versions stored as rows (nodes/edges), not a JSON blob
+Queryable ("which workflows send email?"), referential integrity between edges and nodes, checksum for integrity.
+The editor still exchanges the JSON shape from `workflow-core`; conversion lives in the (future) workflow service.
+
+## D23 — Offset pagination with deterministic ordering
+Simple and adequate for MVP data sizes; the envelope can gain a cursor additively if a list outgrows it.
+
+## D24 — SQLite foreign-key enforcement turned on
+SQLite ignores foreign keys by default. Enabling `PRAGMA foreign_keys=ON` makes the fast test database enforce the same
+tenant/cascade rules as PostgreSQL (tests also run on PostgreSQL in CI).

@@ -1,6 +1,44 @@
 # Implementation status
 
-_Last updated: MVP Prompt 3 (authentication, workspace, onboarding)._
+_Last updated: MVP Prompt 4 (database domain model and API foundations)._
+
+## Completed — MVP Prompt 4: database domain model and API foundations
+- **Schema (migration `0003_domain_model`):** 26 new tables: knowledge, companies, contacts, leads, tags/lead_tags,
+  activities, tasks, opportunities, pipeline stages, email accounts/conversations/messages/drafts/suppression,
+  integration connections, credential secrets, workflows/versions/nodes/edges/runs/step runs/approvals, usage, notifications.
+  Documented in [DATA_MODEL.md](DATA_MODEL.md) (tenancy, retention/deletion, rollback, evolution).
+- **Tenant isolation in the database:** composite `(workspace_id, id)` foreign keys; CASCADE from workspaces; unique
+  constraints for provider ids/duplicates/idempotency; CHECK constraints for statuses and ranges.
+- **Credential store:** encrypted (Fernet), workspace+purpose-bound, rotation, key config; no secret-like column exists
+  anywhere (tested).
+- **API foundations:** `Page[T]` pagination, allow-listed multi-field sorting, filters, workspace scoping helpers,
+  consistent errors; reference resources `tags` (CRUD) and `pipeline/stages`; default stages created at sign-up and
+  backfilled for existing workspaces. See [API_CONVENTIONS.md](API_CONVENTIONS.md).
+- **Seed:** fictional freelancer + `.example`-only companies/contacts across every table, all flagged `is_sample`,
+  development/test only, idempotent.
+- **Contracts:** OpenAPI + generated TypeScript regenerated and type-tested.
+
+## Verification: MVP Prompt 4
+- API: 421 pytest tests passing on **SQLite and PostgreSQL 16** (and on Python 3.12 and 3.13): 126 structural schema
+  guards (tenancy, cascade, indexes, composite FKs, no secrets, timestamps, CHECKs; they also protect future tables),
+  97 behavioural constraint tests (18 uniqueness rules, 30 cross-tenant references refused by the database, 29 invalid
+  values refused, cascades, restrict rules, a fully seeded workspace deleted to prove every cascade), credential store
+  (encryption, tamper/transplant detection, rotation), pagination/sort/filter/isolation through the HTTP API,
+  seed (idempotent, fictional-only, dev-only), migration backfill + rollback + repeatability, model/migration drift.
+- A mutation check (removing the tenant filter) made 6 isolation tests fail and 14 error, so the guards do detect regressions.
+- Bugs found by these tests and fixed: (1) deleting a workspace through the ORM failed (missing `passive_deletes`), which
+  would have broken data-erasure; (2) the stage backfill crashed on SQLite databases that already had workspaces
+  (string vs UUID ids); (3) validation errors for tagged-union bodies used a dotted key (fixed in Prompt 3).
+
+## Not verified / known gaps (Prompt 4)
+- No CRUD endpoints yet for leads/contacts/tasks/etc. (their prompts add them using the conventions above); only tags and
+  stage listing exist as the reference implementation.
+- Offset pagination only; no keyset cursors. No full-text/trigram search indexes yet (queries are undefined until Prompt 6).
+- Message bodies, attachments binary storage, and saved views/custom fields are intentionally not modelled.
+- The credential store keeps keys in the environment (no KMS); nothing stores real credentials yet (email connector is Prompt 9).
+- PostgreSQL row-level security is not used (see D17). Composite-FK tenancy was verified with cross-tenant inserts, not a
+  penetration test.
+- The migration was run against PostgreSQL 16 and SQLite only.
 
 ## Completed — MVP Prompt 3: authentication, workspace, onboarding
 - **Auth (API-owned, see [SECURITY.md](SECURITY.md)):** sign-up, sign-in, sign-out, `GET /auth/me`, password
@@ -99,7 +137,7 @@ JS: lint, typecheck, vitest (workflow-core 8, ui 5, contracts 1, web 5), `next b
 - No authentication, tenancy, business entities, worker or queue (later phases). 
 
 ## Next
-MVP Prompt 4 — database domain model and API foundations.
+MVP Prompt 5 — freelancer profile and approved knowledge.
 
 ## Commands
 See the README. Migrations: `pnpm db:migrate`, rollback one step: `pnpm db:downgrade`.

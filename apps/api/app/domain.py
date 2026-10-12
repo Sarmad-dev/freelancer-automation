@@ -10,7 +10,10 @@ MEMBERSHIP_ROLES = ("owner", "admin", "member")
 
 KNOWLEDGE_KINDS = ("fact", "service", "case_study", "portfolio", "pricing", "other")
 KNOWLEDGE_SOURCES = ("manual", "upload", "extracted")
-KNOWLEDGE_STATUSES = ("draft", "pending_review", "approved", "disabled")
+# Review lifecycle. Whether an approved item is *in use* is a separate switch (``is_enabled``), so turning an
+# item off and on again never loses its approval.
+KNOWLEDGE_STATUSES = ("draft", "pending_review", "approved", "rejected")
+PROFILE_TONES = ("professional", "friendly", "direct", "warm", "concise", "formal")
 
 LEAD_STATUSES = ("new", "contacted", "replied", "qualified", "nurturing", "won", "lost")
 ACTIVITY_KINDS = ("note", "email", "call", "meeting", "stage_change", "task", "system")

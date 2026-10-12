@@ -120,6 +120,9 @@ All input is validated by Pydantic at the API boundary (types, lengths, enums, I
 characters, whitespace normalisation, `extra="forbid"` on onboarding bodies). Portfolio URLs must be public
 `http(s)` URLs without credentials; localhost, `.local/.internal`, and non-global IPs are rejected so a future
 fetcher cannot be pointed at internal addresses. Text is stored verbatim and must always be rendered as text.
+Zero-width/bidi-control characters are stripped (D29). Knowledge `source_ref` accepts only a public `http(s)` URL or a
+plain label (`javascript:`, `data:` and any `scheme://` are refused). Knowledge and profile writes are owner-only; members
+get read access. Audit details for these actions are limited to field *names*, counts, kinds and versions, never content.
 
 ## Known gaps (tracked)
 

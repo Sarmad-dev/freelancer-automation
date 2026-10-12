@@ -21,9 +21,9 @@ describe("navigation config", () => {
     expect(new Set(NAV_ITEMS.map((i) => i.href)).size).toBe(NAV_ITEMS.length);
   });
 
-  it("only Home is marked available; everything else is honestly planned with a phase", () => {
+  it("only built destinations are marked available; everything else is honestly planned with a phase", () => {
     for (const item of NAV_ITEMS) {
-      if (item.id === "home") expect(item.status).toBe("available");
+      if (item.id === "home" || item.id === "ai") expect(item.status).toBe("available");
       else {
         expect(item.status).toBe("planned");
         expect(item.phase).toBeTruthy();
@@ -48,6 +48,15 @@ describe("navigation config", () => {
       { label: "Home", href: "/" },
       { label: "Leads", href: "/leads" },
     ]);
+  });
+
+  it("adds a third crumb for known sub-pages and not for unknown ones", () => {
+    expect(resolveBreadcrumbs("/ai-workspace/profile")).toEqual([
+      { label: "Home", href: "/" },
+      { label: "AI Workspace", href: "/ai-workspace" },
+      { label: "Profile" },
+    ]);
+    expect(resolveBreadcrumbs("/ai-workspace/nope")).toHaveLength(2);
   });
 
   it("labels non-navigation routes", () => {

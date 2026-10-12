@@ -29,6 +29,7 @@ from app.db.models_crm import (
     Company,
     Contact,
     KnowledgeItem,
+    KnowledgeItemVersion,
     Lead,
     LeadTag,
     Opportunity,
@@ -126,36 +127,95 @@ def seed_demo(db: DbSession) -> tuple[bool, uuid.UUID | None]:
             experience_summary="Fictional experience for demonstration only.",
             tone="friendly",
             business_goal="find_new_clients",
+            differentiators=[
+                "Fixed-scope audits (fictional)",
+                "Accessibility-first builds (fictional)",
+            ],
+            excluded_customers=["Gambling operators", "Anyone needing a rush job under one week"],
+            pricing_guidance="Fictional: quote after a discovery call; never state a number in a first email.",
+            preferred_cta="Book a 20-minute intro call (fictional)",
+            version=1,
         )
     )
     stages = {s.key: s for s in ensure_default_stages(db, wid)}
 
-    # --- knowledge ---------------------------------------------------------------------------
-    for kind, title, content, status in (
+    # --- knowledge: one item per lifecycle state, each with a v1 history snapshot -----------------------
+    for kind, title, content, status, source, enabled in (
         (
             "service",
             "Performance audits",
             "Fictional: fixed-scope audits delivered in one week.",
             "approved",
+            "manual",
+            True,
         ),
-        ("fact", "Accessibility focus", "Fictional: all builds target WCAG 2.2 AA.", "approved"),
+        (
+            "fact",
+            "Accessibility focus",
+            "Fictional: all builds target WCAG 2.2 AA.",
+            "approved",
+            "manual",
+            True,
+        ),
+        (
+            "fact",
+            "Retired offering",
+            "Fictional: legacy WordPress maintenance (no longer offered).",
+            "approved",
+            "manual",
+            False,
+        ),
         (
             "case_study",
             "Case study (unreviewed)",
-            "Fictional draft extracted from a document.",
+            "Fictional draft extracted from a pasted document. Not verified.",
             "pending_review",
+            "extracted",
+            True,
+        ),
+        (
+            "fact",
+            "Work in progress",
+            "Fictional note the freelancer has not finished writing.",
+            "draft",
+            "manual",
+            True,
+        ),
+        (
+            "fact",
+            "Rejected claim",
+            "Fictional claim the freelancer decided not to use.",
+            "rejected",
+            "extracted",
+            True,
         ),
     ):
+        approved = status == "approved"
+        item = KnowledgeItem(
+            workspace_id=wid,
+            kind=kind,
+            title=title,
+            content=content,
+            source_type=source,
+            source_ref="Demo resume.pdf (fictional)" if source == "extracted" else None,
+            status=status,
+            is_enabled=enabled,
+            approved_at=now if approved else None,
+            approved_by_user_id=user.id if approved else None,
+            created_by_user_id=user.id,
+        )
+        db.add(item)
+        db.flush()
         db.add(
-            KnowledgeItem(
+            KnowledgeItemVersion(
                 workspace_id=wid,
+                item_id=item.id,
+                version=1,
                 kind=kind,
                 title=title,
                 content=content,
-                source_type="manual" if status == "approved" else "extracted",
-                status=status,
-                approved_at=now if status == "approved" else None,
-                approved_by_user_id=user.id if status == "approved" else None,
+                source_ref=item.source_ref,
+                changed_by_user_id=user.id,
             )
         )
 

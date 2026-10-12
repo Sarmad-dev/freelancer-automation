@@ -104,3 +104,29 @@ Simple and adequate for MVP data sizes; the envelope can gain a cursor additivel
 ## D24 — SQLite foreign-key enforcement turned on
 SQLite ignores foreign keys by default. Enabling `PRAGMA foreign_keys=ON` makes the fast test database enforce the same
 tenant/cascade rules as PostgreSQL (tests also run on PostgreSQL in CI).
+
+## D25 — Knowledge approval is bound to an exact version
+`POST /knowledge/{id}/approve` carries the version the user reviewed. If the item changed in the meantime the API answers 409
+instead of approving content nobody saw. Editing approved content sends it back to `pending_review`, so approved text can
+never silently change under the AI. History snapshots make each version reviewable.
+
+## D26 — `is_enabled` is separate from review status
+"Is this fact true and reviewed?" and "should drafts use it right now?" are different questions. A switch lets a freelancer
+pause an approved fact (a retired service, a stale price) without losing the approval or forcing a re-review.
+
+## D27 — The AI context builder is the only gate to AI input
+`services/ai_context.build_context` is the single place that selects what an AI step may see: approved **and** enabled
+knowledge plus filled profile fields, with a deterministic `context_hash`, a size budget and a `missing`/`excluded_counts`
+report. Unreviewed extraction, drafts, rejected items and private notes are never selected. Later AI features must call it
+rather than querying tables.
+
+## D28 — Import splits text; it does not interpret it
+"Import text" splits pasted material into sentences/bullets verbatim (max 25 items, 15–500 characters each, de-duplicated)
+and creates `pending_review` items. No model is involved, so the feature works without an AI provider and cannot invent
+case studies, client names, certifications or outcomes. When extraction by a model arrives it must use the same
+`pending_review` path.
+
+## D29 — Invisible characters are stripped from free text
+Zero-width and bidi-control characters (except ZWNJ/ZWJ, needed in some scripts) are removed and control characters rejected
+in all user text, so an approved fact cannot hide content from the reviewer ("what you approve is what the AI reads").
+

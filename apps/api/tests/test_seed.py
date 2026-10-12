@@ -127,3 +127,33 @@ def test_cli_seed_creates_then_reports_nothing_to_do(
     assert main(["seed"]) == 0
     assert "Demo data already present" in capsys.readouterr().out
     assert db.scalar(select(func.count()).select_from(Tag)) > 0  # type: ignore[operator]
+
+
+def test_demo_profile_and_knowledge_cover_every_review_state(
+    client: TestClient, demo: uuid.UUID
+) -> None:
+    client.post("/api/v1/auth/sign-in", json={"email": DEMO_EMAIL, "password": DEMO_PASSWORD})
+    profile = client.get(f"/api/v1/workspaces/{demo}/profile").json()
+    assert (
+        profile["pricing_guidance"]
+        and profile["excluded_customers"]
+        and profile["differentiators"]
+        and profile["preferred_cta"]
+    )
+    assert profile["completeness"]["missing"] == [] and "fictional" in profile["role_title"].lower()
+    assert client.get(f"/api/v1/workspaces/{demo}/knowledge/stats").json() == {
+        "draft": 1,
+        "pending_review": 1,
+        "approved": 3,
+        "rejected": 1,
+        "in_use": 2,
+        "disabled": 1,
+    }
+    ctx = client.get(f"/api/v1/workspaces/{demo}/ai-context").json()
+    assert sorted(f["title"] for f in ctx["facts"]) == ["Accessibility focus", "Performance audits"]
+    assert ctx["excluded_counts"] == {"pending_review": 1, "draft": 1, "rejected": 1, "disabled": 1}
+    extracted = client.get(
+        f"/api/v1/workspaces/{demo}/knowledge", params={"source_type": "extracted"}
+    ).json()
+    assert {i["status"] for i in extracted["items"]} == {"pending_review", "rejected"}
+    assert all(i["source_ref"] == "Demo resume.pdf (fictional)" for i in extracted["items"])

@@ -37,6 +37,14 @@ unique constraints) as well as by code. Secrets live only in an encrypted creden
 pagination/sorting/filter contract and error envelope. Full details: [DATA_MODEL.md](DATA_MODEL.md),
 [API_CONVENTIONS.md](API_CONVENTIONS.md).
 
+## Profile, knowledge and AI context (MVP Prompt 5)
+Routers `profile` and `knowledge` call `services/profile.py`, `services/knowledge.py` (lifecycle, import) and
+`services/ai_context.py` (the only selector of AI input; see D27). The web app's AI Workspace has three route-based tabs
+(Overview, Profile, Knowledge). Pages are server components that read through the typed client with the visitor's session
+cookie (`lib/server-api.ts`, `lib/workspace.ts`); editing UIs are client components that mutate through the same-origin
+proxy and then `router.refresh()`. Stored text is always rendered as React text nodes, and links are re-validated to
+http(s) in the browser (`lib/safe-url.ts`).
+
 ## Contracts
 FastAPI is the single source of truth. `pnpm contracts:generate` exports `packages/contracts/openapi.json`
 and regenerates `src/generated/api.d.ts` (openapi-typescript). The web app uses `openapi-fetch` through

@@ -1,14 +1,14 @@
 # Data model
 
-_Status: MVP Prompt 4. 35 application tables (plus Alembic's version table). Source of truth: `apps/api/app/db/models*.py`;
-migrations: `apps/api/alembic/versions` (`0003_domain_model` added 26 tables: everything except the Identity group, `freelancer_profiles` and `audit_events`)._
+_Status: MVP Prompt 5. 36 application tables (plus Alembic's version table). Source of truth: `apps/api/app/db/models*.py`;
+migrations: `apps/api/alembic/versions` (`0003_domain_model` added 26 tables: everything except the Identity group, `freelancer_profiles` and `audit_events`; `0004_profile_fields_and_knowledge_review` added the profile fields, the knowledge review lifecycle and `knowledge_item_versions`)._
 
 ## Entities
 
 | Group | Tables | Notes |
 |---|---|---|
 | Identity & tenancy | `users`, `workspaces`, `memberships`, `sessions`, `password_reset_tokens`, `onboarding_progress` | MVP: one personal workspace, one `owner` membership. Roles `owner/admin/member` are CHECK-constrained so teams can be added without a schema change. |
-| Profile & knowledge | `freelancer_profiles`, `knowledge_items` | Knowledge has provenance (`source_type`, `source_ref`), review `status`, `version`, approver. Only `approved` items may reach AI context. |
+| Profile & knowledge | `freelancer_profiles`, `knowledge_items`, `knowledge_item_versions` | Profile has a `version` (optimistic concurrency). Knowledge has provenance (`source_type` manual/upload/extracted, `source_ref`, `created_by_user_id`), review `status` (`draft`/`pending_review`/`approved`/`rejected`), `version`, approver and an independent `is_enabled` switch. Only items that are `approved` **and** enabled may reach AI context. `knowledge_item_versions` holds one content snapshot per version (cascade-deleted with the item). |
 | CRM | `companies`, `contacts`, `leads`, `tags`, `lead_tags`, `pipeline_stages`, `opportunities`, `activities`, `tasks` | Leads carry `fit_score` + `fit_explanation` (JSON) and provenance (`source`, `source_retrieved_at`). |
 | Email & outreach | `email_accounts`, `conversations`, `messages`, `drafts`, `suppression_entries` | Message **metadata only** (no body column yet). Drafts carry `content_hash` / `approved_content_hash` so approval binds to exact content. |
 | Integrations & secrets | `integration_connections`, `credential_secrets` | Connections hold a `credential_id` only. Secrets live encrypted in `credential_secrets`. |
@@ -70,3 +70,13 @@ Soft deletion is used only where users reasonably want records back; everything 
 - **Search/scale:** add `pg_trgm`/GIN indexes (`leads.title`, `companies.name`) once Prompt 6 defines the queries; partition `audit_events`/`usage_records` by month if volume demands.
 - **Lead fit criteria, saved views, custom fields:** new tables referencing `(workspace_id, id)` with `tenant_fk`; the guard tests will enforce the rules automatically.
 - **ULIDs:** if time-ordered ids are wanted later, switch the default factory in `mixins.new_uuid`; the column type is unchanged.
+
+## Profile and knowledge (MVP Prompt 5)
+- **Lifecycle:** `draft`/`pending_review` --approve(version)--> `approved` --edit--> `pending_review` (version +1, history
+  snapshot) ; any --reject--> `rejected` --edit--> `draft`. Approval names the version that was reviewed; a changed item
+  answers 409 `stale_version`. Extracted or imported items always arrive as `pending_review`.
+- **`is_enabled`** is an on/off switch, not a content change: no version bump, approval kept. Legacy `disabled` status
+  rows were migrated to `draft` + `is_enabled = false`; the downgrade restores them.
+- **Profile fields** added: `excluded_customers`, `differentiators`, `pricing_guidance`, `preferred_cta` (and `version`).
+  Private fields (`pricing_guidance`, `excluded_customers`, `tone_notes`, business goal) are never part of the public summary.
+- **Deletion:** deleting an item removes its history. Existing drafts are not rewritten (they keep their own stored text).

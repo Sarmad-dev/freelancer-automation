@@ -98,9 +98,9 @@ export const NAV_ITEMS: readonly NavItem[] = [
     label: "AI Workspace",
     href: "/ai-workspace",
     icon: Sparkles,
-    status: "planned",
-    phase: "MVP Prompts 5 and 8",
-    description: "Freelancer profile, approved knowledge and generation history.",
+    status: "available",
+    description:
+      "Your profile and the approved knowledge AI is allowed to use. Generation history arrives with the AI features.",
   },
   {
     id: "integrations",
@@ -150,6 +150,12 @@ const EXTRA_ROUTE_LABELS: Record<string, string> = {
   "/onboarding": "Onboarding",
 };
 
+/** Known second-level pages inside a primary destination. */
+const SUBPAGE_LABELS: Record<string, string> = {
+  "/ai-workspace/profile": "Profile",
+  "/ai-workspace/knowledge": "Knowledge",
+};
+
 export function resolveBreadcrumbs(pathname: string): Crumb[] {
   const current = NAV_ITEMS.find((i) => i.href !== "/" && isActivePath(pathname, i.href));
   if (!current) {
@@ -160,10 +166,12 @@ export function resolveBreadcrumbs(pathname: string): Crumb[] {
       : [{ label: "Home", href: "/" }, { label: "Page" }];
   }
   const crumbs: Crumb[] = [{ label: "Home", href: "/" }];
+  const sub = SUBPAGE_LABELS[pathname];
   crumbs.push(
     pathname === current.href
       ? { label: current.label }
       : { label: current.label, href: current.href },
   );
+  if (sub) crumbs.push({ label: sub });
   return crumbs;
 }

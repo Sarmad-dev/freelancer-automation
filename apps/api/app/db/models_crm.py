@@ -57,11 +57,13 @@ class KnowledgeItem(TenantMixin, Timestamps, Base):
 
     __tablename__ = "knowledge_items"
     __table_args__ = (
+        UniqueConstraint("workspace_id", "id", name="uq_knowledge_items_workspace_id_id"),
         check_in("kind", domain.KNOWLEDGE_KINDS),
         check_in("source_type", domain.KNOWLEDGE_SOURCES),
         check_in("status", domain.KNOWLEDGE_STATUSES),
         CheckConstraint("version >= 1", name="version_positive"),
         Index("ix_knowledge_items_workspace_status", "workspace_id", "status"),
+        Index("ix_knowledge_items_workspace_updated", "workspace_id", "updated_at"),
     )
 
     id: Mapped[uuid.UUID] = pk_column()
@@ -76,6 +78,36 @@ class KnowledgeItem(TenantMixin, Timestamps, Base):
     approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     approved_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("users.id", ondelete="SET NULL")
+    )
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="SET NULL")
+    )
+    # Approved AND enabled items are the only ones the AI context builder may use.
+    is_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+
+
+class KnowledgeItemVersion(TenantMixin, Base):
+    """Immutable snapshot of a knowledge item's content at each version (history and audit)."""
+
+    __tablename__ = "knowledge_item_versions"
+    __table_args__ = (
+        UniqueConstraint("item_id", "version", name="uq_knowledge_item_versions_item_version"),
+        tenant_fk("knowledge_item_versions", "item_id", "knowledge_items", ondelete="CASCADE"),
+        Index("ix_knowledge_item_versions_workspace_item", "workspace_id", "item_id"),
+    )
+
+    id: Mapped[uuid.UUID] = pk_column()
+    item_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    kind: Mapped[str] = mapped_column(String(20), nullable=False)
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    source_ref: Mapped[str | None] = mapped_column(String(500))
+    changed_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="SET NULL")
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=utcnow
     )
 
 

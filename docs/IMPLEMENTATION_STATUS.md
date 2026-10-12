@@ -1,6 +1,51 @@
 # Implementation status
 
-_Last updated: MVP Prompt 4 (database domain model and API foundations)._
+_Last updated: MVP Prompt 5 (freelancer profile and approved knowledge)._
+
+## Completed — MVP Prompt 5: freelancer profile and approved knowledge
+- **API (owner writes, members read; all workspace-scoped):** `GET/PATCH /profile` (optimistic `expected_version`),
+  `GET /profile/summary` (public-facing preview built only from entered, non-private fields), `GET /ai-context`;
+  knowledge CRUD with filters/sort/search, `GET /knowledge/stats`, `POST /knowledge/import-text`,
+  `POST /{id}/approve` (bound to the reviewed version), `POST /{id}/reject`, `GET /{id}/versions`, delete.
+- **Approval model:** `draft/pending_review/approved/rejected` + independent `is_enabled`; editing approved content returns it
+  to review; every version is snapshotted. See [DATA_MODEL.md](DATA_MODEL.md) and decisions D25–D29.
+- **AI context builder** (`services/ai_context.py`): the only gate. Includes approved + enabled facts and filled profile
+  fields; reports what is missing and how many items were excluded; deterministic hash; size budget. It never selects
+  unreviewed, rejected, disabled or private material, and nothing in the app invents case studies, names or outcomes.
+- **No AI provider needed:** import splits pasted text verbatim into items that need review.
+- **Safety:** URLs validated server-side (public http(s) only) and re-validated in the browser; all stored text rendered
+  as text; invisible/bidi characters stripped; audit details carry no content.
+- **Web:** AI Workspace is now live with Overview, Profile (sectioned editor, unsaved-changes guard, conflict banner,
+  live public-summary preview, "what the AI may use") and Knowledge (filters, pagination, status badges, enable switch,
+  review/edit drawer with provenance and history, add, import, delete with confirmation). New shared `Switch`.
+- **Seed:** the fictional demo profile and six knowledge items covering approved, switched-off, pending (extracted),
+  draft and rejected, each with history.
+- **Migration `0004`:** hand-reviewed; converts legacy `disabled` rows, backfills version 1 history; reversible.
+
+## Verification: MVP Prompt 5
+- API: 580 pytest tests pass on **SQLite and PostgreSQL 16 and on Python 3.12 and 3.13**; ruff and mypy (strict) clean;
+  OpenAPI document byte-identical on 3.12 and 3.13. Highlights: workspace isolation for every endpoint (including a second
+  workspace's ids), member read-only, approval status rules and version binding, stale-version conflicts, deletion + history
+  cascade, invalid/unsafe URLs, invisible-character stripping, AI-context selection (only approved + enabled, private fields
+  excluded, hash stable, truncation), migration upgrade/downgrade with legacy data on both databases, drift check.
+- Mutation checks: removing the tenant filter, admitting every status into the context, and ignoring `is_enabled` each made
+  tests fail.
+- Web: 139 vitest tests (new: model, profile editor, knowledge manager incl. inert markup, conflict, delete confirmation,
+  axe) and 29 ui tests (Switch). Lint, typecheck, format and production build pass.
+- Real browser (Chromium via Playwright): axe (WCAG 2 A/AA, best practice) clean on Overview/Profile/Knowledge (+filter
+  states) at 1440/820/390 px in dark and light themes with no page-level overflow; end-to-end add -> invalid link error ->
+  save -> approve -> switch off/on -> edit approved (returns to review) -> import -> delete, checked against the database; a
+  `<img onerror>` title stayed inert. Bugs found and fixed this way: heading order in the summary preview (h2 -> h4), and
+  a visually-hidden table header escaping the scroll container and causing horizontal page scroll on mobile.
+
+## Not verified / known gaps (Prompt 5)
+- No file upload or URL fetching: "upload"/"extracted" provenance exists in the model but only text import is wired; model-based
+  extraction arrives with the AI prompts and must reuse the `pending_review` path.
+- Single owner per workspace in practice: member role behaviour is covered by API tests, not by a browser run.
+- Knowledge search is substring matching (no full-text index). Offset pagination.
+- No diff view between versions; history shows snapshots only.
+- Deleting a knowledge item does not (yet) invalidate drafts that quoted it (there are no drafts until later prompts).
+- The profile "public summary" is a preview only; there is no public page.
 
 ## Completed — MVP Prompt 4: database domain model and API foundations
 - **Schema (migration `0003_domain_model`):** 26 new tables: knowledge, companies, contacts, leads, tags/lead_tags,
@@ -137,7 +182,7 @@ JS: lint, typecheck, vitest (workflow-core 8, ui 5, contracts 1, web 5), `next b
 - No authentication, tenancy, business entities, worker or queue (later phases). 
 
 ## Next
-MVP Prompt 5 — freelancer profile and approved knowledge.
+MVP Prompt 6 — leads (see the playbook).
 
 ## Commands
 See the README. Migrations: `pnpm db:migrate`, rollback one step: `pnpm db:downgrade`.

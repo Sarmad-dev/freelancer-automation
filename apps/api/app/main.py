@@ -15,7 +15,7 @@ from app.config import Settings, get_settings
 from app.errors import install_error_handlers
 from app.mailer import ConsoleMailer, DisabledMailer, Mailer
 from app.ratelimit import MemoryRateLimiter, RateLimiter, RedisRateLimiter
-from app.routers import auth, health, pipeline, tags, workspaces
+from app.routers import auth, health, knowledge, pipeline, profile, tags, workspaces
 from app.security.credentials import build_store
 from app.security.csrf import CSRF_HEADER, is_request_allowed
 
@@ -111,6 +111,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(workspaces.router)
     app.include_router(tags.router)
     app.include_router(pipeline.router)
+    app.include_router(profile.router)
+    app.include_router(knowledge.router)
     return app
 
 

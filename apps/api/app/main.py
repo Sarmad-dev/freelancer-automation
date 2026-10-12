@@ -14,6 +14,7 @@ from app import __version__
 from app.ai.factory import build_provider
 from app.config import Settings, get_settings
 from app.errors import install_error_handlers
+from app.mailbox.registry import build_registry
 from app.mailer import ConsoleMailer, DisabledMailer, Mailer
 from app.ratelimit import MemoryRateLimiter, RateLimiter, RedisRateLimiter
 from app.routers import (
@@ -21,6 +22,9 @@ from app.routers import (
     auth,
     companies,
     contacts,
+    drafts,
+    email,
+    email_oauth,
     fit_scoring,
     health,
     imports,
@@ -30,6 +34,7 @@ from app.routers import (
     opportunities,
     pipeline,
     profile,
+    suppressions,
     tags,
     tasks,
     workspaces,
@@ -38,6 +43,26 @@ from app.security.credentials import build_store
 from app.security.csrf import CSRF_HEADER, is_request_allowed
 
 logger = logging.getLogger("freelancer_os")
+
+
+class RedactOAuthQuery(logging.Filter):
+    """The OAuth redirect carries a one-time ``code`` and ``state`` in its query string. Access logs must not keep them."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        args = record.args
+        if isinstance(args, tuple) and len(args) >= 3 and isinstance(args[2], str):
+            target = args[2]
+            if "/email/oauth/callback" in target and "?" in target:
+                record.args = (*args[:2], target.split("?", 1)[0] + "?[redacted]", *args[3:])
+        return True
+
+
+def _install_log_redaction() -> None:
+    access = logging.getLogger("uvicorn.access")
+    if not any(isinstance(f, RedactOAuthQuery) for f in access.filters):
+        access.addFilter(RedactOAuthQuery())
+
+
 _REQUEST_ID_RE = re.compile(r"[A-Za-z0-9._-]{1,64}")
 
 
@@ -85,8 +110,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.rate_limiter = limiter
     app.state.mailer = mailer
     app.state.ai_provider = build_provider(settings)
+    app.state.mailbox = build_registry(settings)
     app.state.credentials = build_store(settings.credential_encryption_keys)
     install_error_handlers(app)
+    _install_log_redaction()
 
     @app.middleware("http")
     async def csrf_guard(
@@ -141,6 +168,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(tasks.router)
     app.include_router(notifications.router)
     app.include_router(ai.router)
+    app.include_router(email.router)
+    app.include_router(email_oauth.router)
+    app.include_router(drafts.router)
+    app.include_router(suppressions.router)
     return app
 
 

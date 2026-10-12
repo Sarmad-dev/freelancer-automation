@@ -43,6 +43,7 @@ Follow the playbook's MVP prompts in order; each phase ends with updated docs an
 | 6 | Leads, contacts, companies, CSV import, fit scoring | **Done** |
 | 7 | Pipeline, tasks, activity timeline | **Done** |
 | 8 | AI provider abstraction and safe structured outputs | **Done** |
-| 9–16 | Email, inbox, workflows, approvals, integrations, analytics, release readiness | Not started |
+| 9 | Email integration framework and demo mode | **Done** (Gmail adapter unverified live) |
+| 10–16 | Inbox, workflows, approvals, integrations, analytics, release readiness | Not started |
 
 See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for details.

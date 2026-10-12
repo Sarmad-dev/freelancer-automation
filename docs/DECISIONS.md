@@ -187,3 +187,21 @@ Each call writes a `usage_records` row (task, provider, model, prompt version, t
 ## D48 — The gateway adapter targets the common chat-completions shape and is labelled unverified
 The playbook names "Jev" as the preferred gateway, but no credentials or verified documentation were available. The adapter speaks the widely used OpenAI-compatible shape, is tested against a simulated server only, does not follow redirects, never copies response bodies into errors, and the docs say plainly that no live provider has been evaluated. `python -m app.cli ai-eval` is the check to run before trusting one.
 
+## D49 — The demo mailbox is a real connector, kept apart from real data
+Demo mode runs through the same `EmailConnector` interface as a real provider, so everything above it (sync, linking, drafts, sending) is exercised by the demo. It is separated from real data by an `is_demo` account, the `demo` provider, `is_sample` rows and a `demo` delivery state; a demo account can never be synced or sent from by a real connector, or vice versa. Its sends are simulated and say so.
+
+## D50 — Real providers are labelled unverified until used end to end
+The Gmail adapter is written from the documented API and tested against simulated responses. The product says "Not verified live", reports `Connected` only after a real provider call succeeded, and `docs/EMAIL.md` lists the checks that must pass with a real account before anyone claims live sync. Menus, scopes and token lifetimes are Google's to change; the docs say they must be re-checked.
+
+## D51 — OAuth state lives on the server and the grant must be complete
+The `state` is a single-use, expiring record in the encrypted credential store, bound to the user and workspace that started it, checked in constant time, and deleted whatever happens; PKCE protects the code exchange. A grant missing a required scope (people can untick permissions on Google's screen) or a refresh token is refused rather than saved half-working. The redirect back to the web app is a relative path with no code, state or provider text, and the access log redacts the callback's query.
+
+## D52 — Least-privilege Gmail scopes: read and send, not compose
+`gmail.readonly` (conversations) and `gmail.send` (only approved messages) are requested; `gmail.compose` is not, so provider-side drafts are not offered. Fewer permissions are easier to justify to users and to Google, and Freelancer OS keeps its own drafts anyway.
+
+## D53 — A send is recorded before it happens, and ambiguity is never retried
+Approval binds to a hash of recipient, subject and body, so what is sent is exactly what was approved. The attempt is committed as `queued` with its idempotency key before the provider is called; a repeated key returns the earlier outcome. Definite failures clear the key and keep the same message row (a retry cannot create a second message); an ambiguous result (timeout, 5xx, unexpected error) is stored as `unknown`, blocks any new key, and waits for the owner to check the mailbox and say what happened. Suppression, send limits and mailbox state are checked server-side at send time.
+
+## D54 — Revocation and disconnect never depend on the provider being reachable
+A failed token refresh (`invalid_grant`) moves the account to `needs_reauth` and stops provider calls. Disconnect deletes our copy of the credentials even if revocation could not be confirmed, and says so; keeping a credential because a provider is down would be worse than asking the person to remove access on the provider's side.
+

@@ -26,12 +26,22 @@ const FORWARD_RESPONSE_HEADERS = [
   "content-disposition", // lets CSV exports and error reports download with their filename
 ] as const;
 
-const ALLOWED_PREFIXES = ["auth", "workspaces"] as const;
+const ALLOWED_PREFIXES = ["auth", "workspaces", "email"] as const;
+
+/** The only `email` route the browser may reach: where the mail provider sends people back after they consent. */
+const EMAIL_OAUTH_CALLBACK = ["email", "oauth", "callback"] as const;
 
 /** Returns the upstream path (`/api/v1/...`) for a catch-all route, or null if it must be refused. */
 export function buildUpstreamPath(segments: string[]): string | null {
   if (segments.length === 0) return null;
   if (!ALLOWED_PREFIXES.includes(segments[0] as (typeof ALLOWED_PREFIXES)[number])) return null;
+  if (
+    segments[0] === "email" &&
+    (segments.length !== EMAIL_OAUTH_CALLBACK.length ||
+      !EMAIL_OAUTH_CALLBACK.every((part, i) => segments[i] === part))
+  ) {
+    return null;
+  }
   for (const s of segments) {
     // eslint-disable-next-line no-control-regex -- rejecting control characters is the point
     if (s === "" || s === "." || s === ".." || /[\\/\u0000-\u001f]/.test(s)) return null;
@@ -48,12 +58,21 @@ export function pickRequestHeaders(incoming: Headers): Headers {
   return out;
 }
 
+/** A path on this site: starts with one slash, not `//host` or `/\\host`, and has no control characters. */
+export function isSameSitePath(value: string): boolean {
+  // eslint-disable-next-line no-control-regex -- rejecting control characters is the point
+  return /^\/(?![/\\])/.test(value) && !/[\u0000-\u001f]/.test(value);
+}
+
 export function pickResponseHeaders(upstream: Headers): Headers {
   const out = new Headers();
   for (const name of FORWARD_RESPONSE_HEADERS) {
     const value = upstream.get(name);
     if (value) out.set(name, value);
   }
+  // A redirect is passed on only when it stays on this site (the OAuth callback returns people to /integrations).
+  const location = upstream.get("location");
+  if (location && isSameSitePath(location)) out.set("location", location);
   // Authenticated responses must never be cached by shared caches or the browser.
   out.set("cache-control", "no-store");
   for (const cookie of upstream.getSetCookie()) out.append("set-cookie", cookie);

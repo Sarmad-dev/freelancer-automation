@@ -48,6 +48,12 @@ clearly labelled, so everything works without credentials. To use a real model s
 `AI_API_KEY` and `AI_MODEL` in the API's environment (server-side only). `cd apps/api && uv run python -m app.cli ai-eval` runs
 the evaluation set against whichever provider is configured. In production AI is off unless configured.
 
+## Email
+Open **Integrations** to add the **demo mailbox** (fictional data; nothing is ever delivered) and sync it. Connecting Gmail needs Google OAuth
+credentials in the API's environment (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`) and is **not verified against a real account**; the exact
+setup steps and the end-to-end check to run are in [docs/EMAIL.md](docs/EMAIL.md). Sending always requires an approved draft, an
+idempotency key and a recipient who is not on the do-not-contact list.
+
 ## Leads (no outside lead source needed)
 Add leads by hand at `/leads` (a title is enough), or import a CSV at `/leads/import` (upload, map columns, preview, choose how
 to treat duplicates, import, download the error report). The demo workspace ships with clearly labelled **Sample** leads. Fit

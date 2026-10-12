@@ -80,9 +80,13 @@ class EmailAccount(TenantMixin, Timestamps, Base):
     credential_id: Mapped[uuid.UUID | None] = mapped_column(Uuid)
     granted_scopes: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
     # Provider sync cursor (e.g. Gmail historyId). Opaque and non-secret.
-    sync_cursor: Mapped[str | None] = mapped_column(String(200))
+    sync_cursor: Mapped[str | None] = mapped_column(String(500))
     last_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_error_code: Mapped[str | None] = mapped_column(String(60))
+    # Last time a REAL connection test (or sync) reached the provider and succeeded / failed.
+    last_health_check_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # The provider asked us to back off until this instant; no calls are made before it.
+    rate_limited_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class Conversation(TenantMixin, Timestamps, Base):
@@ -139,6 +143,9 @@ class Message(TenantMixin, Base):
         check_in("delivery_state", domain.MESSAGE_DELIVERY_STATES),
         tenant_fk("messages", "email_account_id", "email_accounts", ondelete="CASCADE"),
         tenant_fk("messages", "conversation_id", "conversations", ondelete="CASCADE"),
+        tenant_fk("messages", "draft_id", "drafts"),
+        # One message per approved draft: a retried send updates this row and can never add a second.
+        UniqueConstraint("workspace_id", "draft_id", name="uq_messages_workspace_draft"),
         Index(
             "ix_messages_workspace_conversation_sent", "workspace_id", "conversation_id", "sent_at"
         ),
@@ -155,6 +162,9 @@ class Message(TenantMixin, Base):
     subject: Mapped[str | None] = mapped_column(String(500))
     snippet: Mapped[str | None] = mapped_column(String(500))
     attachments: Mapped[list[dict[str, Any]]] = mapped_column(JSON, nullable=False, default=list)
+    draft_id: Mapped[uuid.UUID | None] = mapped_column(Uuid)
+    # Why a delivery failed or is unknown ("rate_limited", "timeout", ...). A code, never a message.
+    delivery_error_code: Mapped[str | None] = mapped_column(String(60))
     sent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=utcnow

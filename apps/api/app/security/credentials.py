@@ -41,6 +41,14 @@ class CredentialStore(Protocol):
         self, db: DbSession, workspace_id: uuid.UUID, credential_id: uuid.UUID
     ) -> dict[str, str]: ...
 
+    def update(
+        self,
+        db: DbSession,
+        workspace_id: uuid.UUID,
+        credential_id: uuid.UUID,
+        secret: dict[str, str],
+    ) -> None: ...
+
     def delete(self, db: DbSession, workspace_id: uuid.UUID, credential_id: uuid.UUID) -> None: ...
 
 
@@ -133,6 +141,24 @@ class EncryptedDbCredentialStore:
         self, db: DbSession, workspace_id: uuid.UUID, credential_id: uuid.UUID
     ) -> dict[str, str]:
         return self._decrypt(self._load(db, workspace_id, credential_id))
+
+    def update(
+        self,
+        db: DbSession,
+        workspace_id: uuid.UUID,
+        credential_id: uuid.UUID,
+        secret: dict[str, str],
+    ) -> None:
+        """Replace the secret in place (e.g. a refreshed access token) under the current key."""
+        if not secret:
+            raise CredentialError("Refusing to store an empty secret")
+        row = self._load(db, workspace_id, credential_id)
+        row.ciphertext = self._fernets[self._current_id].encrypt(
+            self._envelope(workspace_id, row.purpose, secret)
+        )
+        row.key_id = self._current_id
+        row.rotated_at = utcnow()
+        db.flush()
 
     def delete(self, db: DbSession, workspace_id: uuid.UUID, credential_id: uuid.UUID) -> None:
         db.delete(self._load(db, workspace_id, credential_id))

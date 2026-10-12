@@ -23,7 +23,7 @@ describe("navigation config", () => {
 
   it("only built destinations are marked available; everything else is honestly planned with a phase", () => {
     for (const item of NAV_ITEMS) {
-      if (["home", "ai", "leads", "pipeline", "tasks"].includes(item.id))
+      if (["home", "ai", "leads", "pipeline", "tasks", "integrations"].includes(item.id))
         expect(item.status).toBe("available");
       else {
         expect(item.status).toBe("planned");

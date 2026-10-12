@@ -23,7 +23,8 @@ describe("navigation config", () => {
 
   it("only built destinations are marked available; everything else is honestly planned with a phase", () => {
     for (const item of NAV_ITEMS) {
-      if (["home", "ai", "leads"].includes(item.id)) expect(item.status).toBe("available");
+      if (["home", "ai", "leads", "pipeline", "tasks"].includes(item.id))
+        expect(item.status).toBe("available");
       else {
         expect(item.status).toBe("planned");
         expect(item.phase).toBeTruthy();
@@ -78,6 +79,19 @@ describe("navigation config", () => {
       { label: "Contact" },
     ]);
     expect(resolveBreadcrumbs("/leads/import").at(-1)).toEqual({ label: "Import" });
+  });
+
+  it("labels deal pages", () => {
+    const id = "11111111-1111-4111-8111-111111111111";
+    expect(resolveBreadcrumbs(`/pipeline/${id}`)).toEqual([
+      { label: "Home", href: "/" },
+      { label: "Pipeline", href: "/pipeline" },
+      { label: "Deal" },
+    ]);
+    expect(resolveBreadcrumbs("/tasks")).toEqual([
+      { label: "Home", href: "/" },
+      { label: "Tasks & Calendar" },
+    ]);
   });
 
   it("labels non-navigation routes", () => {

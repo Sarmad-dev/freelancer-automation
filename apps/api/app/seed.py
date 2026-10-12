@@ -10,7 +10,7 @@ Safety:
 from __future__ import annotations
 
 import uuid
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 
 from sqlalchemy import select
@@ -413,19 +413,40 @@ def seed_demo(db: DbSession) -> tuple[bool, uuid.UUID | None]:
 
     # --- opportunities, activities, tasks -----------------------------------------------------
     opps = {}
-    for key, stage, amount, prob in (
-        ("fabrikam", "proposal", "12000.00", 60),
-        ("northwind", "meeting", "6500.00", 40),
+    for key, stage, amount, currency, prob, status, loss in (
+        ("fabrikam", "proposal", "12000.00", "USD", 60, "open", None),
+        ("northwind", "meeting", "6500.00", "USD", 40, "open", None),
+        (
+            "contoso",
+            "contacted",
+            "4000.00",
+            "EUR",
+            None,
+            "open",
+            None,
+        ),  # no probability: not guessed
+        (
+            "tailspin",
+            "lost",
+            "2500.00",
+            "USD",
+            None,
+            "lost",
+            "Not a client type I take (fictional)",
+        ),
     ):
         o = Opportunity(
             workspace_id=wid,
             lead_id=leads[key].id,
             stage_id=stages[stage].id,
             title=f"{companies[key].name} project",
+            status=status,
             value_amount=Decimal(amount),
-            currency="USD",
+            currency=currency,
             probability=prob,
-            expected_close_date=date.today() + timedelta(days=30),
+            expected_close_date=date.today() + timedelta(days=30) if status == "open" else None,
+            loss_reason=loss,
+            closed_at=now - timedelta(days=2) if status != "open" else None,
             owner_user_id=user.id,
             is_sample=True,
         )
@@ -453,20 +474,47 @@ def seed_demo(db: DbSession) -> tuple[bool, uuid.UUID | None]:
             occurred_at=now - timedelta(hours=5),
         )
     )
-    for title, due, prio in (
-        ("Follow up with Northwind (overdue)", now - timedelta(days=1), "high"),
-        ("Send Fabrikam proposal", now + timedelta(hours=6), "high"),
-        ("Research Tailspin", now + timedelta(days=3), "low"),
-    ):
+    task_rows: list[tuple[str, datetime | None, str, str, str | None, str | None]] = [
+        (
+            "Follow up with Northwind (overdue)",
+            now - timedelta(days=1),
+            "high",
+            "open",
+            "northwind",
+            None,
+        ),
+        (
+            "Send Fabrikam proposal",
+            now + timedelta(hours=6),
+            "high",
+            "open",
+            "fabrikam",
+            "fabrikam",
+        ),
+        ("Research Tailspin", now + timedelta(days=3), "low", "open", None, None),
+        ("Review pricing notes (no due date)", None, "normal", "open", None, None),
+        (
+            "Send intro email to Northwind",
+            now - timedelta(days=3),
+            "normal",
+            "done",
+            "northwind",
+            None,
+        ),
+    ]
+    for title, due, prio, task_status, task_lead, task_opp in task_rows:
         db.add(
             Task(
                 workspace_id=wid,
                 title=title,
                 due_at=due,
-                due_timezone="Europe/Berlin",
+                due_timezone="Europe/Berlin" if due else None,
                 priority=prio,
+                status=task_status,
+                completed_at=now - timedelta(days=2) if task_status == "done" else None,
                 assignee_user_id=user.id,
-                lead_id=leads["fabrikam"].id if "Fabrikam" in title else None,
+                lead_id=leads[task_lead].id if task_lead else None,
+                opportunity_id=opps[task_opp].id if task_opp else None,
                 is_sample=True,
             )
         )

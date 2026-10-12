@@ -32,10 +32,19 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
     api.GET("/api/v1/workspaces/{workspace_id}/contacts", {
       params: { path, query: { limit: 100, sort: "full_name" } },
     }),
+    // The deals and follow-ups panels are secondary: if they fail the rest of the page still works.
+    api.GET("/api/v1/workspaces/{workspace_id}/opportunities", {
+      params: { path, query: { lead_id: id, limit: 20, sort: "-updated_at" } },
+    }),
+    api.GET("/api/v1/workspaces/{workspace_id}/tasks", {
+      params: { path, query: { lead_id: id, view: "open", limit: 20 } },
+    }),
+    api.GET("/api/v1/workspaces/{workspace_id}/tasks/summary", { params: { path } }),
   ]).catch(() => null);
 
   if (results?.[0].response.status === 404) notFound();
-  const [lead, activities, tags, stages, companies, contacts] = results ?? [];
+  const [lead, activities, tags, stages, companies, contacts, deals, tasks, summary] =
+    results ?? [];
   if (
     !lead?.data ||
     !activities?.data ||
@@ -60,6 +69,9 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
       stages={stages.data.items}
       companies={companies.data.items}
       contacts={contacts.data.items}
+      deals={deals?.data?.items ?? []}
+      tasks={tasks?.data?.items ?? []}
+      timezone={summary?.data?.timezone ?? "UTC"}
       canEdit={workspace.role === "owner"}
       now={new Date().toISOString()}
     />

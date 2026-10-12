@@ -10,6 +10,8 @@ from app.db.models_crm import PipelineStage
 from app.deps import DbDep, WorkspaceDep
 from app.errors import ErrorResponse
 from app.schemas.crm import PipelineStageOut
+from app.schemas.pipeline import PipelineBoard
+from app.services import opportunities as opportunity_svc
 
 router = APIRouter(prefix="/api/v1/workspaces/{workspace_id}/pipeline", tags=["pipeline"])
 
@@ -42,3 +44,13 @@ def list_stages(
         limit=params.limit,
         offset=params.offset,
     )
+
+
+@router.get(
+    "/board",
+    response_model=PipelineBoard,
+    responses=_ERR,
+    summary="Every stage with its deals (newest first, up to 50 per column), counts and per-currency totals",
+)
+def pipeline_board(ctx: WorkspaceDep, db: DbDep) -> PipelineBoard:
+    return opportunity_svc.board(db, ctx)

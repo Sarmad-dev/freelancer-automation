@@ -70,8 +70,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     label: "Pipeline",
     href: "/pipeline",
     icon: KanbanSquare,
-    status: "planned",
-    phase: "MVP Prompt 7",
+    status: "available",
     description: "Opportunities by stage, with table and Kanban views.",
   },
   {
@@ -88,8 +87,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     label: "Tasks & Calendar",
     href: "/tasks",
     icon: CalendarCheck,
-    status: "planned",
-    phase: "MVP Prompt 7",
+    status: "available",
     description: "Follow-ups, reminders and deadlines.",
   },
   {
@@ -178,6 +176,7 @@ const DETAIL_ROUTES: readonly {
     label: "Contact",
   },
   { pattern: new RegExp(`^/leads/${ID}$`), label: "Lead" },
+  { pattern: new RegExp(`^/pipeline/${ID}$`), label: "Deal" },
 ];
 
 export function resolveBreadcrumbs(pathname: string): Crumb[] {

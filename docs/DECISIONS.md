@@ -151,3 +151,21 @@ SQLite and PostgreSQL disagree about NULL order and PostgreSQL's collation depen
 ## D36 — Export is owner-only and counted
 A lead export is bulk personal data leaving the app, so it requires the owner role, refuses more than 10,000 rows instead of silently truncating, and is audited with a count (never the content).
 
+## D37 — Deals are opportunities created from leads; stage moves are checked, never patched
+A lead is a person or company you might work with; a deal (opportunity) is a piece of work you might win from it, with a value, a chance and a close date. Deals change stage only through `move` and `reopen`, which enforce the rules in one place: the stage must exist in this workspace, a closed deal must be reopened explicitly, and a lost deal can carry a reason. Every move is written to the deal's and the lead's timeline.
+
+## D38 — Concurrent moves are decided by the client's view of the world
+A board can be stale (another tab, another day). Every move carries `expected_stage_id`; if the deal is no longer there the answer is 409 `stale_stage` and nothing changes, so a drag on an old board can't silently undo someone else's move. The row is also locked during the check on PostgreSQL. No version column was needed.
+
+## D39 — Money is exact, per currency, and a probability is never guessed
+Values are `NUMERIC(14,2)` and travel as strings. Totals are grouped by currency and never added across currencies. The chance of winning is the user's own number; deals without one are simply left out of weighted totals (and said so) instead of being given a stage-based default that looks like knowledge.
+
+## D40 — Wall-clock times are resolved in the zone they were meant in
+A task due "9am Monday, Europe/Berlin" is stored as a UTC instant plus the zone name. The API accepts either an exact instant or a wall-clock time with a zone; a time that clocks skip is rejected rather than shifted, a repeated hour resolves to its first occurrence. "Today" is the local day in the zone being viewed (23 or 25 hours on clock-change days). Overdue = already past due; Today = still due before local midnight; Upcoming = later: the buckets never overlap.
+
+## D41 — Task creation is idempotent by client key
+The task form generates a key once when it opens and sends it with every submit. The same key returns the original task (200 instead of 201); the same key with a different task is a 409. The database's unique `(workspace, key)` decides races, so a double click, a retry after a flaky connection, or two tabs can't create duplicates.
+
+## D42 — Task notifications are produced when notifications are read
+Until a job runner exists (Prompt 11) the API creates "task due" and "task reminder" notifications lazily when the unread count or list is requested, with one dedupe key per (task, kind, instant), looking back 14 days and capping each read at 50. Completing, dismissing or rescheduling a task marks its pending notifications read. The same function can be called from a scheduled job later without any change in behaviour.
+

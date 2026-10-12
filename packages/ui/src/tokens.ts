@@ -8,6 +8,10 @@ export const darkTokens = {
   border: "#2b2e36",
   accent: "#a8e66b",
   accentContrast: "#0f1a05",
+  success: "#4ade80",
+  warning: "#fbbf24",
+  danger: "#f87171",
+  info: "#60a5fa",
 } as const;
 
 export const lightTokens = {
@@ -18,8 +22,12 @@ export const lightTokens = {
   text: "#14161a",
   textMuted: "#565b66",
   border: "#dcdfe6",
-  accent: "#3f7d0f",
+  accent: "#386f0d",
   accentContrast: "#ffffff",
+  success: "#11693a",
+  warning: "#855608",
+  danger: "#b42318",
+  info: "#1d4ed8",
 } as const;
 
 function channel(v: number): number {
@@ -38,4 +46,13 @@ function luminance(hex: string): number {
 export function contrastRatio(a: string, b: string): number {
   const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x) as [number, number];
   return (hi + 0.05) / (lo + 0.05);
+}
+
+/** Colour `fg` blended over `bg` at `alpha` (0-1), as #rrggbb. Mirrors Tailwind's `bg-x/10` tints. */
+export function blend(fg: string, bg: string, alpha: number): string {
+  const f = parseInt(fg.slice(1), 16);
+  const b = parseInt(bg.slice(1), 16);
+  const mix = (shift: number) =>
+    Math.round(((f >> shift) & 255) * alpha + ((b >> shift) & 255) * (1 - alpha));
+  return `#${[16, 8, 0].map((s) => mix(s).toString(16).padStart(2, "0")).join("")}`;
 }

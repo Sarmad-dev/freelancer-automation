@@ -36,8 +36,8 @@ Follow the playbook's MVP prompts in order; each phase ends with updated docs an
 | # | Phase | Status |
 |---|-------|--------|
 | 1 | Repository scaffold and local development | **Done** |
-| 2 | Design system, app shell, navigation | Not started |
-| 3 | Authentication, workspace, onboarding | Not started |
+| 2 | Design system, app shell, navigation | **Done** |
+| 3 | Authentication, workspace, onboarding | **Done** |
 | 4 | Domain model and API foundations | Not started |
 | 5–16 | Profile, leads, pipeline, AI, email, inbox, workflows, approvals, integrations, analytics, release readiness | Not started |
 

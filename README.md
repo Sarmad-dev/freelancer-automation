@@ -4,7 +4,8 @@ AI-assisted CRM and visual workflow automation for independent freelancers (work
 Blueprint and build prompts: [`freelancer_os_build_prompt_playbook.md`](freelancer_os_build_prompt_playbook.md).
 Project docs: [`docs/`](docs).
 
-> Status: **scaffold only** (MVP Prompt 1). No product features yet.
+> Status: MVP Prompts 1-3 done (scaffold, design system/app shell, authentication + onboarding).
+> Everything else in the app is a clearly-marked placeholder.
 
 ## Prerequisites
 - Node.js ≥ 20.11 and [pnpm](https://pnpm.io) 10 (`corepack enable`)
@@ -26,6 +27,18 @@ pnpm dev                       # http://localhost:3000  (second terminal)
 ```
 Verify: `curl localhost:8000/health`, `curl localhost:8000/ready`, `curl localhost:3000/api/health`, and open
 http://localhost:3000 — the page should report API connectivity as **Connected**.
+
+## Authentication (development)
+Sign up at http://localhost:3000/sign-up (creates your personal workspace, then the onboarding wizard).
+There are **no seeded users or default credentials**. Password reset works in development without email:
+the API (`MAIL_BACKEND=console`) prints the reset link to its log. In production password reset is
+disabled until a mail provider exists. See [docs/SECURITY.md](docs/SECURITY.md) for how sessions, CSRF,
+rate limiting and workspace isolation work, and the known gaps.
+
+Production checklist for auth: `APP_ENV=production`, a random `APP_SECRET_KEY`, HTTPS (cookies are `Secure`
+and `__Host-` prefixed), `RATE_LIMIT_BACKEND=redis`, `CORS_ALLOWED_ORIGINS` set to the exact web origin(s)
+(it doubles as the CSRF origin allow-list), and `TRUSTED_PROXY_COUNT` matching your proxy chain. The API
+refuses to start in production with insecure values.
 
 ## Scripts
 | Command | Purpose |

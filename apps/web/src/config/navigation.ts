@@ -104,9 +104,9 @@ export const NAV_ITEMS: readonly NavItem[] = [
     label: "Integrations",
     href: "/integrations",
     icon: Plug,
-    status: "planned",
-    phase: "MVP Prompts 9 and 14",
-    description: "Connected apps, permissions and connection diagnostics.",
+    status: "available",
+    description:
+      "Email connections: the demo mailbox now, Gmail once the server has Google credentials. Other connectors arrive with the integrations area.",
   },
   {
     id: "analytics",

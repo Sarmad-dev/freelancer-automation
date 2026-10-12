@@ -54,6 +54,9 @@ http(s) in the browser (`lib/safe-url.ts`).
 ## AI service layer (MVP Prompt 8)
 `app/ai/` holds `AiService` (`service.py`), versioned `prompts.py`, strict `schemas.py`, `untrusted.py` (minimise, fence, injection signals), `validate.py` (claims, leaks), `rules.py` (opt-out and fallback), providers (`mock`, `gateway`, `disabled`), `inputs.py` (workspace-scoped model inputs) and `evals.py`. `services/ai_context.py` still decides which facts a model may know (D27); `AiService` decides what the model is asked and what it may answer (D43–D48). `GET /ai/status` is the only HTTP surface for now. See [AI.md](AI.md).
 
+## Email framework (MVP Prompt 9)
+`app/mailbox/` holds the `EmailConnector` interface, normalised types, the demo and Gmail connectors, MIME helpers and the registry. `services/email_accounts.py` owns OAuth, token refresh, sync and disconnect; `services/drafts.py` owns approval and the guarded send path; `services/suppression.py` is the do-not-contact list. Routers: `email` (providers, accounts, connect, sync, test, disconnect), `email_oauth` (the provider redirect target), `drafts`, `suppressions`. On the web, `/integrations` shows mailboxes and the connectors that exist. See [EMAIL.md](EMAIL.md) and D49–D54.
+
 ## Contracts
 FastAPI is the single source of truth. `pnpm contracts:generate` exports `packages/contracts/openapi.json`
 and regenerates `src/generated/api.d.ts` (openapi-typescript). The web app uses `openapi-fetch` through

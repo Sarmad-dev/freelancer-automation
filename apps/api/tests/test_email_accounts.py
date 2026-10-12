@@ -958,3 +958,22 @@ def test_access_logs_never_keep_the_oauth_code_or_state() -> None:
     )
     RedactOAuthQuery().filter(other)
     assert "x=1" in other.getMessage()
+
+
+def test_a_flow_cannot_be_finished_by_someone_who_is_no_longer_the_owner(
+    client: TestClient, db: DbSession
+) -> None:
+    from app.db.models import Membership
+
+    u = make_user(client)
+    fake = install(client)
+    state = start_connect(client, u["workspace_id"])
+    membership = db.scalar(
+        select(Membership).where(Membership.workspace_id == uuid.UUID(u["workspace_id"]))
+    )
+    assert membership is not None
+    membership.role = "member"  # e.g. their role was reduced while the consent screen was open
+    db.commit()
+    res = callback(client, state, code=CODE)
+    assert "reason=not_allowed" in res.headers["location"] and "exchange_code" not in fake.calls
+    assert client.get(ws_url(u["workspace_id"], "/accounts")).json() == []

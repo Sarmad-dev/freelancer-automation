@@ -4,6 +4,7 @@ import logging
 import re
 import uuid
 from collections.abc import Awaitable, Callable
+from typing import Any
 
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -19,6 +20,28 @@ from app.security.csrf import CSRF_HEADER, is_request_allowed
 
 logger = logging.getLogger("freelancer_os")
 _REQUEST_ID_RE = re.compile(r"[A-Za-z0-9._-]{1,64}")
+
+
+def _install_stable_openapi(app: FastAPI) -> None:
+    """Make the OpenAPI document independent of the Python version.
+
+    FastAPI takes response descriptions from ``http.HTTPStatus``, and Python 3.13 renamed 422 from
+    "Unprocessable Entity" to "Unprocessable Content". Without this, ``pnpm contracts:check`` would
+    fail whenever the generating interpreter differs from the committed output.
+    """
+    original = app.openapi
+
+    def stable_openapi() -> dict[str, Any]:
+        if app.openapi_schema is None:
+            schema = original()
+            for path in schema.get("paths", {}).values():
+                for operation in path.values():
+                    response = operation.get("responses", {}).get("422")
+                    if response is not None:
+                        response["description"] = "Unprocessable Content"
+        return app.openapi_schema or original()
+
+    app.openapi = stable_openapi  # type: ignore[method-assign]
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -80,6 +103,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         response.headers["X-Content-Type-Options"] = "nosniff"
         return response
 
+    _install_stable_openapi(app)
     app.include_router(health.router)
     app.include_router(auth.router)
     app.include_router(workspaces.router)

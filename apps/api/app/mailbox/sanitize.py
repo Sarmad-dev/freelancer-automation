@@ -77,6 +77,7 @@ def clean_html(html: str) -> str:
         url_schemes=ALLOWED_SCHEMES,
         link_rel="noopener noreferrer nofollow",
         strip_comments=True,
+        url_relative="deny",  # a relative link means nothing inside a standalone message; drop it
         generic_attribute_prefixes=set(),
         tag_attribute_values={},
         set_tag_attribute_values={},

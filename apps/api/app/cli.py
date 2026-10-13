@@ -2,6 +2,8 @@
 
 Commands
 - ``seed``            Insert idempotent development seed data (development/test only).
+- ``process-jobs``    Classify queued inbound messages (``--loop`` keeps running as a worker).
+- ``process-workflows``  Run due workflow runs, wake delays, expire approvals (``--loop`` keeps running as a worker).
 - ``ai-eval``         Run the AI evaluation fixtures against the configured provider (exit 1 on any failure).
 - ``export-openapi``  Write the OpenAPI document used to generate frontend types.
 """
@@ -61,6 +63,45 @@ def export_openapi(target: str) -> int:
     return 0
 
 
+def process_jobs(loop: bool, interval: float) -> int:
+    import time
+
+    from app.main import create_app
+    from app.services.email_jobs import run_worker
+
+    app = create_app()
+    while True:
+        stats = run_worker(app)
+        if stats.claimed:
+            print(
+                f"claimed={stats.claimed} classified={stats.classified} retried={stats.retried} "
+                f"failed={stats.failed} skipped={stats.skipped}"
+            )
+        if not loop:
+            return 0
+        time.sleep(interval)
+
+
+def process_workflows(loop: bool, interval: float) -> int:
+    import time
+
+    from app.main import create_app
+    from app.workflows.engine import run_worker
+
+    app = create_app()
+    while True:
+        stats = run_worker(app)
+        if stats.claimed or stats.approvals_expired:
+            print(
+                f"claimed={stats.claimed} finished={stats.finished} waiting={stats.waiting} "
+                f"requeued={stats.requeued} lost_lease={stats.lost_lease} errors={stats.errors} "
+                f"approvals_expired={stats.approvals_expired}"
+            )
+        if not loop:
+            return 0
+        time.sleep(interval)
+
+
 def ai_eval() -> int:
     from app.ai.evals import run_evals
     from app.ai.factory import build_provider
@@ -89,6 +130,24 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="app.cli")
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("seed")
+    jobs = sub.add_parser("process-jobs")
+    jobs.add_argument(
+        "--loop",
+        action="store_true",
+        help="keep running instead of exiting when the queue is empty",
+    )
+    jobs.add_argument(
+        "--interval", type=float, default=5.0, help="seconds between polls with --loop"
+    )
+    flows = sub.add_parser("process-workflows")
+    flows.add_argument(
+        "--loop",
+        action="store_true",
+        help="keep running instead of exiting when nothing is due",
+    )
+    flows.add_argument(
+        "--interval", type=float, default=5.0, help="seconds between polls with --loop"
+    )
     sub.add_parser("ai-eval")
     export = sub.add_parser("export-openapi")
     export.add_argument("target")
@@ -96,6 +155,10 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command == "seed":
             return seed()
+        if args.command == "process-jobs":
+            return process_jobs(args.loop, args.interval)
+        if args.command == "process-workflows":
+            return process_workflows(args.loop, args.interval)
         if args.command == "ai-eval":
             return ai_eval()
         return export_openapi(args.target)

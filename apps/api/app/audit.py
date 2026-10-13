@@ -43,6 +43,15 @@ ALLOWED_DETAIL_KEYS = frozenset(
         "state",
         "messages",
         "conversations",
+        # Workflow engine (MVP Prompt 11): ids, node types, states and error categories. Never content.
+        "workflow_id",
+        "run_id",
+        "node",
+        "node_type",
+        "mode",
+        "category",
+        "decision",
+        "trigger",
     }
 )
 

@@ -634,7 +634,7 @@ def test_every_call_is_metered_without_content(client: TestClient, db: DbSession
     )
     assert ok_row.estimated_cost_micros == (10 * 2000 + 5 * 4000) // 1000
     assert (
-        ok_row.prompt_version == "2026-10-v1"
+        ok_row.prompt_version == "2026-10-v2"
         and ok_row.latency_ms is not None
         and not ok_row.is_mock
     )
@@ -676,3 +676,73 @@ def test_unmetered_services_write_nothing(client: TestClient, db: DbSession) -> 
     ws = make_user(client)["workspace_id"]
     service(MockProvider(), workspace_id=uuid.UUID(ws), meter=False).classify_reply(REPLY)
     assert _usage(db, ws) == []
+
+
+# ----------------------------------------------------------------------------- classification evidence (MVP Prompt 10)
+
+
+def test_classification_keeps_only_quotes_that_really_appear_in_the_reply() -> None:
+    reply = ClassifyReplyInput(
+        subject="Re: hello", body="We already have an in-house team, so no thanks."
+    )
+    provider = ScriptedProvider(
+        {
+            **GOOD_CLASSIFY,
+            "category": "objection",
+            "evidence": ["already have an in-house team", "We will pay triple"],
+        }
+    )
+    out = service(provider).classify_reply(reply)
+    assert out.ok and out.data and out.data.evidence == ["already have an in-house team"]
+    assert "evidence_dropped" in out.warnings
+
+
+def test_quotes_are_matched_ignoring_case_and_spacing_and_never_invented_by_the_fallback() -> None:
+    reply = ClassifyReplyInput(body="Sounds   GREAT,\nlet's talk next week.")
+    out = service(
+        ScriptedProvider({**GOOD_CLASSIFY, "evidence": ["sounds great, let's talk"]})
+    ).classify_reply(reply)
+    assert (
+        out.data
+        and out.data.evidence == ["sounds great, let's talk"]
+        and "evidence_dropped" not in out.warnings
+    )
+    fallback = service(
+        ScriptedProvider(ProviderTimeout()), limits=AiLimits(max_attempts=1)
+    ).classify_reply(reply)
+    assert fallback.meta.source == "rules_fallback" and fallback.data is not None
+    assert (
+        all(q.lower() in " ".join(f"{reply.body}".split()).lower() for q in fallback.data.evidence)
+        and fallback.data.evidence
+    )
+
+
+def test_the_forced_opt_out_carries_the_words_that_asked_to_stop() -> None:
+    body = "Interesting! But please remove me from your list."
+    out = service(
+        ScriptedProvider({**GOOD_CLASSIFY, "category": "interested", "evidence": ["Interesting!"]})
+    ).classify_reply(ClassifyReplyInput(body=body))
+    assert (
+        out.data
+        and out.data.category == "unsubscribe"
+        and "remove me" in out.data.evidence[0].lower()
+    )
+
+
+def test_the_rules_quote_what_they_matched() -> None:
+    from app.ai.rules import classify_by_rules
+
+    for text, category in (
+        ("I am out of the office until Monday.", "out_of_office"),
+        ("Bad timing, please check back next quarter.", "not_now"),
+        ("We already have an agency.", "objection"),
+        ("You should talk to our marketing lead.", "referral"),
+        ("What does that cost?", "question"),
+    ):
+        result = classify_by_rules(None, text)
+        assert (
+            result.category == category
+            and result.evidence
+            and all(q in text for q in result.evidence)
+        )
+    assert classify_by_rules(None, "ok").evidence == []

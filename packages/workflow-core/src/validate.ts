@@ -1,18 +1,38 @@
-import type { WorkflowDefinition } from "./schema";
-import { SIDE_EFFECT_NODE_TYPES, workflowDefinitionSchema } from "./schema";
+/**
+ * Structural validation of a workflow definition, for instant feedback in the editor.
+ *
+ * This mirrors the structural part of the authoritative Python validator
+ * (`apps/api/app/workflows/validate.py`) and reports the same issue codes for the same definition:
+ * duplicate_node_id, duplicate_edge_id, dangling_edge, unknown_node_type, unknown_port, ambiguous_branch,
+ * unhandled_branch, missing_trigger, multiple_triggers, trigger_has_incoming, unreachable_node, cycle and
+ * missing_end. A malformed definition (bad id, unknown key, too many nodes...) gives a `schema` issue.
+ *
+ * It does NOT check node settings (missing_config, invalid_config, unknown_placeholder), data flow
+ * (missing_input) or the rule that an email is only sent after an approval (send_without_approval).
+ * Those need the server's node catalogue and are checked by the API when a workflow is saved or run, so
+ * a definition that passes here can still be rejected there.
+ */
+import type { WorkflowDefinition, WorkflowEdge, WorkflowNode } from "./schema";
+import { DEFAULT_PORT, NODE_PORTS, workflowDefinitionSchema } from "./schema";
+
+export type ValidationIssueCode =
+  | "schema"
+  | "duplicate_node_id"
+  | "duplicate_edge_id"
+  | "dangling_edge"
+  | "unknown_node_type"
+  | "unknown_port"
+  | "ambiguous_branch"
+  | "unhandled_branch"
+  | "missing_trigger"
+  | "multiple_triggers"
+  | "trigger_has_incoming"
+  | "unreachable_node"
+  | "cycle"
+  | "missing_end";
 
 export type ValidationIssue = {
-  code:
-    | "schema"
-    | "duplicate_node_id"
-    | "duplicate_edge_id"
-    | "missing_trigger"
-    | "multiple_triggers"
-    | "dangling_edge"
-    | "unreachable_node"
-    | "cycle"
-    | "send_without_approval"
-    | "condition_branches";
+  code: ValidationIssueCode;
   message: string;
   nodeId?: string;
   edgeId?: string;
@@ -22,7 +42,37 @@ export type ValidationResult =
   | { ok: true; definition: WorkflowDefinition; issues: [] }
   | { ok: false; definition?: WorkflowDefinition; issues: ValidationIssue[] };
 
-/** Structural validation only; per-node config validation arrives with the engine phase. */
+const name = (node: WorkflowNode): string => node.label || node.id;
+const portOf = (edge: WorkflowEdge): string => edge.branch || DEFAULT_PORT;
+
+/** The output ports of a node type, or undefined when the type is not in the catalogue. */
+function portsOf(type: string): readonly string[] | undefined {
+  return Object.hasOwn(NODE_PORTS, type) ? NODE_PORTS[type as keyof typeof NODE_PORTS] : undefined;
+}
+
+/** Whether every node can be ordered so that each comes after the ones leading to it (no loops). */
+function isAcyclic(nodes: Set<string>, outgoing: Map<string, string[]>): boolean {
+  const indegree = new Map<string, number>([...nodes].map((id) => [id, 0]));
+  for (const [source, targets] of outgoing) {
+    if (!nodes.has(source)) continue;
+    for (const target of targets) {
+      if (indegree.has(target)) indegree.set(target, (indegree.get(target) ?? 0) + 1);
+    }
+  }
+  const ready = [...indegree].filter(([, d]) => d === 0).map(([id]) => id);
+  let ordered = 0;
+  for (let current = ready.pop(); current !== undefined; current = ready.pop()) {
+    ordered += 1;
+    for (const target of outgoing.get(current) ?? []) {
+      const left = indegree.get(target);
+      if (left === undefined) continue;
+      indegree.set(target, left - 1);
+      if (left - 1 === 0) ready.push(target);
+    }
+  }
+  return ordered === nodes.size;
+}
+
 export function validateWorkflow(input: unknown): ValidationResult {
   const parsed = workflowDefinitionSchema.safeParse(input);
   if (!parsed.success) {
@@ -37,124 +87,148 @@ export function validateWorkflow(input: unknown): ValidationResult {
   const def = parsed.data;
   const issues: ValidationIssue[] = [];
 
-  const ids = new Set<string>();
+  // Nodes: unique ids (the first node with an id wins), known types.
+  const nodes = new Map<string, WorkflowNode>();
   for (const n of def.nodes) {
-    if (ids.has(n.id)) {
+    if (nodes.has(n.id)) {
       issues.push({
         code: "duplicate_node_id",
-        message: `Duplicate node id "${n.id}"`,
+        message: `Two nodes share the id "${n.id}".`,
+        nodeId: n.id,
+      });
+      continue;
+    }
+    nodes.set(n.id, n);
+  }
+  for (const n of nodes.values()) {
+    if (portsOf(n.type) === undefined) {
+      issues.push({
+        code: "unknown_node_type",
+        message: `"${name(n)}" has an unknown type "${n.type}".`,
         nodeId: n.id,
       });
     }
-    ids.add(n.id);
   }
+
+  // Edges: unique ids, real endpoints, real ports, one edge per port.
   const edgeIds = new Set<string>();
+  const used = new Set<string>();
+  const goodEdges: WorkflowEdge[] = [];
   for (const e of def.edges) {
     if (edgeIds.has(e.id)) {
       issues.push({
         code: "duplicate_edge_id",
-        message: `Duplicate edge id "${e.id}"`,
+        message: `Two connections share the id "${e.id}".`,
         edgeId: e.id,
       });
+      continue;
     }
     edgeIds.add(e.id);
-    if (!ids.has(e.source) || !ids.has(e.target)) {
+    const source = nodes.get(e.source);
+    if (source === undefined || !nodes.has(e.target)) {
       issues.push({
         code: "dangling_edge",
-        message: `Edge "${e.id}" references a missing node`,
+        message: `Connection "${e.id}" points at a node that does not exist.`,
+        edgeId: e.id,
+      });
+      continue;
+    }
+    const port = portOf(e);
+    const ports = portsOf(source.type);
+    if (ports !== undefined && !ports.includes(port)) {
+      const allowed = ports.length > 0 ? ports.join(", ") : "none (it ends the workflow)";
+      issues.push({
+        code: "unknown_port",
+        message: `"${name(source)}" has no "${port}" output. Its outputs: ${allowed}.`,
+        nodeId: source.id,
+        edgeId: e.id,
+      });
+      continue;
+    }
+    const key = JSON.stringify([e.source, port]);
+    if (used.has(key)) {
+      issues.push({
+        code: "ambiguous_branch",
+        message: `"${name(source)}" has two connections from its "${port}" output. A run follows exactly one path.`,
+        nodeId: source.id,
+        edgeId: e.id,
+      });
+      continue;
+    }
+    used.add(key);
+    goodEdges.push(e);
+  }
+
+  // Trigger: exactly one, and nothing leads back into it.
+  const triggers = [...nodes.values()].filter((n) => n.type === "trigger");
+  if (triggers.length === 0) {
+    issues.push({ code: "missing_trigger", message: "A workflow needs one trigger to start it." });
+  }
+  for (const t of triggers.slice(1)) {
+    issues.push({
+      code: "multiple_triggers",
+      message: "Only one trigger is supported. Remove the extra one.",
+      nodeId: t.id,
+    });
+  }
+  for (const e of goodEdges) {
+    if (nodes.get(e.target)?.type === "trigger") {
+      issues.push({
+        code: "trigger_has_incoming",
+        message: "Nothing can lead back into the trigger.",
+        nodeId: e.target,
         edgeId: e.id,
       });
     }
   }
 
-  const triggers = def.nodes.filter((n) => n.type === "trigger");
-  if (triggers.length === 0) {
-    issues.push({ code: "missing_trigger", message: "A workflow needs exactly one trigger node" });
-  } else if (triggers.length > 1) {
-    issues.push({ code: "multiple_triggers", message: "Only one trigger node is supported" });
-  }
-
-  const outgoing = new Map<string, string[]>();
-  for (const e of def.edges) {
-    if (!ids.has(e.source) || !ids.has(e.target)) continue;
-    outgoing.set(e.source, [...(outgoing.get(e.source) ?? []), e.target]);
-  }
-
-  // Reachability from the trigger.
-  const reachable = new Set<string>();
-  const start = triggers[0];
-  if (start) {
-    const stack = [start.id];
-    while (stack.length > 0) {
-      const id = stack.pop() as string;
-      if (reachable.has(id)) continue;
-      reachable.add(id);
-      stack.push(...(outgoing.get(id) ?? []));
-    }
-    for (const n of def.nodes) {
-      if (!reachable.has(n.id)) {
+  // Every output port of every node is connected.
+  for (const n of nodes.values()) {
+    for (const port of portsOf(n.type) ?? []) {
+      if (!used.has(JSON.stringify([n.id, port]))) {
+        const what = port === DEFAULT_PORT ? "the next step" : `the "${port}" path`;
         issues.push({
-          code: "unreachable_node",
-          message: `Node "${n.label ?? n.id}" is not reachable from the trigger`,
+          code: "unhandled_branch",
+          message: `"${name(n)}" does not say what happens on ${what}. Connect it to a step or an end.`,
           nodeId: n.id,
         });
       }
     }
   }
 
-  // Cycles are not supported in the MVP (loops arrive later with hard iteration limits).
-  const state = new Map<string, 1 | 2>();
-  const visit = (id: string): boolean => {
-    state.set(id, 1);
-    for (const next of outgoing.get(id) ?? []) {
-      const s = state.get(next);
-      if (s === 1) return true;
-      if (s === undefined && visit(next)) return true;
-    }
-    state.set(id, 2);
-    return false;
-  };
-  for (const n of def.nodes) {
-    if (!state.has(n.id) && visit(n.id)) {
-      issues.push({
-        code: "cycle",
-        message: "Workflow contains a cycle, which is not supported yet",
-      });
-      break;
-    }
+  if (nodes.size > 0 && ![...nodes.values()].some((n) => n.type === "end")) {
+    issues.push({ code: "missing_end", message: "A workflow needs at least one End node." });
   }
 
-  // Conditions must expose explicit true and false paths.
-  for (const n of def.nodes.filter((x) => x.type === "condition")) {
-    const branches = new Set(def.edges.filter((e) => e.source === n.id).map((e) => e.branch));
-    if (!branches.has("true") || !branches.has("false")) {
-      issues.push({
-        code: "condition_branches",
-        message: `Condition "${n.label ?? n.id}" needs both a "true" and a "false" branch`,
-        nodeId: n.id,
-      });
+  // Reachability from the first trigger, over the connections that passed the checks above.
+  const outgoing = new Map<string, string[]>();
+  for (const e of goodEdges) outgoing.set(e.source, [...(outgoing.get(e.source) ?? []), e.target]);
+  const reachable = new Set<string>();
+  const start = triggers[0];
+  if (start !== undefined) {
+    const stack = [start.id];
+    for (let current = stack.pop(); current !== undefined; current = stack.pop()) {
+      if (reachable.has(current)) continue;
+      reachable.add(current);
+      stack.push(...(outgoing.get(current) ?? []));
     }
-  }
-
-  // Safety: side-effecting nodes must be preceded by an approval gate on every path from the trigger.
-  const byId = new Map(def.nodes.map((n) => [n.id, n]));
-  if (start) {
-    const approved = (id: string, seenApproval: boolean, path: Set<string>): void => {
-      const node = byId.get(id);
-      if (!node || path.has(id)) return;
-      const gate = seenApproval || node.type === "approval_gate";
-      if (SIDE_EFFECT_NODE_TYPES.has(node.type) && !seenApproval) {
+    for (const n of nodes.values()) {
+      if (!reachable.has(n.id)) {
         issues.push({
-          code: "send_without_approval",
-          message: `"${node.label ?? node.id}" can run without a preceding approval gate`,
-          nodeId: node.id,
+          code: "unreachable_node",
+          message: `"${name(n)}" can never run: nothing leads to it from the trigger.`,
+          nodeId: n.id,
         });
-        return;
       }
-      const next = new Set(path).add(id);
-      for (const n of outgoing.get(id) ?? []) approved(n, gate, next);
-    };
-    approved(start.id, false, new Set());
+    }
+  }
+
+  // Loops are not supported (only the part reachable from the trigger is checked).
+  if (!isAcyclic(reachable, outgoing)) {
+    issues.push({
+      code: "cycle",
+      message: "The workflow loops back on itself. Loops are not supported yet.",
+    });
   }
 
   return issues.length === 0

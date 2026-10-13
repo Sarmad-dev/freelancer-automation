@@ -42,8 +42,10 @@ from app.db.models_email import (
     Conversation,
     Draft,
     EmailAccount,
+    EmailJob,
     IntegrationConnection,
     Message,
+    MessageBody,
     SuppressionEntry,
 )
 from app.db.models_workflow import (
@@ -57,6 +59,8 @@ from app.db.models_workflow import (
     WorkflowStepRun,
     WorkflowVersion,
 )
+from app.mailbox.demo import fixture, fixture_snippet
+from app.mailbox.sanitize import SANITIZER_VERSION, prepare_body
 from app.security.passwords import hash_password
 from app.services.drafts import content_hash
 from app.services.fit_scoring import DEFAULT_CRITERIA, ProfileFacts, Scorer
@@ -554,6 +558,9 @@ def seed_demo(db: DbSession) -> tuple[bool, uuid.UUID | None]:
         classification="interested",
         classification_confidence=0.86,
         classification_explanation="Demo classification (mock, not a real model).",
+        classification_evidence=["can we talk next week"],
+        classification_source="demo_ai",
+        classified_at=now - timedelta(hours=4),
         is_sample=True,
     )
     db.add(conv)
@@ -569,7 +576,7 @@ def seed_demo(db: DbSession) -> tuple[bool, uuid.UUID | None]:
             from_address=acct.email_address,
             to_addresses=[contacts["northwind"].email or ""],
             subject="Website rebuild",
-            snippet="Hi Jordan, fictional outreach message.",
+            snippet=fixture_snippet("demo-msg-1"),
             sent_at=now - timedelta(days=2),
             is_sample=True,
         )
@@ -585,11 +592,45 @@ def seed_demo(db: DbSession) -> tuple[bool, uuid.UUID | None]:
             from_address=contacts["northwind"].email or "",
             to_addresses=[acct.email_address],
             subject="Re: Website rebuild",
-            snippet="Sounds interesting, can we talk next week? (fictional)",
+            snippet=fixture_snippet("demo-msg-2"),
             sent_at=now - timedelta(hours=5),
             is_sample=True,
         )
     )
+    db.flush()
+    for mid in ("demo-msg-1", "demo-msg-2"):
+        stored = db.scalar(
+            select(Message).where(
+                Message.email_account_id == acct.id, Message.provider_message_id == mid
+            )
+        )
+        assert stored is not None
+        demo_msg = fixture(mid)
+        prepared = prepare_body(demo_msg.text, demo_msg.html)
+        db.add(
+            MessageBody(
+                workspace_id=wid,
+                message_id=stored.id,
+                body_text=prepared.text,
+                body_html=prepared.html,
+                text_truncated=prepared.text_truncated,
+                images_blocked=prepared.images_blocked,
+                sanitizer_version=SANITIZER_VERSION if prepared.html else None,
+            )
+        )
+        if mid == "demo-msg-2":
+            conv.classified_message_id = stored.id
+            db.add(
+                EmailJob(
+                    workspace_id=wid,
+                    conversation_id=conv.id,
+                    message_id=stored.id,
+                    kind="classify",
+                    status="succeeded",
+                    attempts=1,
+                    completed_at=now,
+                )
+            )
     draft = Draft(
         workspace_id=wid,
         lead_id=leads["northwind"].id,
@@ -631,17 +672,25 @@ def seed_demo(db: DbSession) -> tuple[bool, uuid.UUID | None]:
     db.add(wf)
     db.flush()
     nodes = [
-        {"key": "trigger", "type": "trigger", "config": {"event": "lead.created"}},
+        {"key": "trigger", "type": "trigger", "config": {"event": "lead_created"}},
         {"key": "assess", "type": "ai_assess_fit", "config": {}},
         {"key": "draft", "type": "ai_draft", "config": {}},
-        {"key": "approve", "type": "approval_gate", "config": {"expires_hours": 48}},
+        {
+            "key": "approve",
+            "type": "approval_gate",
+            "config": {"message": "Review the draft before it is sent.", "expires_hours": 48},
+        },
         {"key": "send", "type": "send_email", "config": {}},
+        {"key": "done", "type": "end", "config": {"outcome": "success"}},
+        {"key": "rejected", "type": "end", "config": {"outcome": "success", "reason": "Not sent"}},
     ]
     edges = [
         {"key": "e1", "source": "trigger", "target": "assess"},
         {"key": "e2", "source": "assess", "target": "draft"},
         {"key": "e3", "source": "draft", "target": "approve"},
-        {"key": "e4", "source": "approve", "target": "send"},
+        {"key": "e4", "source": "approve", "target": "send", "branch": "approved"},
+        {"key": "e5", "source": "approve", "target": "rejected", "branch": "rejected"},
+        {"key": "e6", "source": "send", "target": "done"},
     ]
     ver = WorkflowVersion(
         workspace_id=wid,
@@ -650,6 +699,9 @@ def seed_demo(db: DbSession) -> tuple[bool, uuid.UUID | None]:
         checksum=definition_checksum(nodes, edges),
         created_by_user_id=user.id,
         note="Seeded starter template",
+        valid=True,
+        issues=[],
+        trigger_event="lead_created",
     )
     db.add(ver)
     db.flush()
@@ -674,6 +726,7 @@ def seed_demo(db: DbSession) -> tuple[bool, uuid.UUID | None]:
                 edge_key=e["key"],
                 source_key=e["source"],
                 target_key=e["target"],
+                branch=e.get("branch"),
             )
         )
     run = WorkflowRun(
@@ -683,13 +736,32 @@ def seed_demo(db: DbSession) -> tuple[bool, uuid.UUID | None]:
         status="waiting_approval",
         mode="test",
         trigger_type="manual",
-        trigger_payload={"lead": "demo"},
+        trigger_payload={"event": "manual", "subject_type": "lead"},
         idempotency_key="seed-run-1",
         correlation_id=uuid.uuid4().hex,
         started_at=now,
+        subject_type="lead",
+        subject_id=leads["northwind"].id,
+        current_node_key="approve",
+        context={"lead_id": str(leads["northwind"].id), "draft_id": str(draft.id)},
+        steps_taken=3,
     )
     db.add(run)
     db.flush()
+    for done_key in ("trigger", "assess", "draft"):
+        db.add(
+            WorkflowStepRun(
+                workspace_id=wid,
+                run_id=run.id,
+                node_key=done_key,
+                attempt=1,
+                status="succeeded",
+                started_at=now,
+                finished_at=now,
+                port="next",
+                output_summary={"note": "seeded"},
+            )
+        )
     step = WorkflowStepRun(
         workspace_id=wid,
         run_id=run.id,
@@ -711,7 +783,11 @@ def seed_demo(db: DbSession) -> tuple[bool, uuid.UUID | None]:
             target_type="lead",
             target_id=str(leads["northwind"].id),
             payload_hash=draft.content_hash,
-            proposed_payload={"to": "redacted", "subject": draft.subject},
+            proposed_payload={
+                "summary": "Review the draft before it is sent.",
+                "node": "approve",
+                "mode": "test",
+            },
             status="pending",
             requested_by_user_id=None,
             expires_at=now + timedelta(hours=48),

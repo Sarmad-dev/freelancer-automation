@@ -73,6 +73,10 @@ class ClassifyReplyOutput(_Strict):
     category: ReplyCategory
     confidence: float = Field(ge=0, le=1)
     rationale: str = Field(min_length=1, max_length=300)
+    # Short exact quotes from the reply that justify the category (checked against the reply; unsupported ones are dropped).
+    evidence: list[
+        Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)]
+    ] = Field(default_factory=list, max_length=3)
 
 
 # --------------------------------------------------------------------------- assess_lead_fit
@@ -156,9 +160,23 @@ class DraftLead(_Strict):
     notes: str | None = Field(default=None, max_length=2_000, description="Untrusted free text.")
 
 
+class ReplyContext(_Strict):
+    """When drafting an answer to an incoming message instead of a first outreach."""
+
+    subject: str | None = Field(default=None, max_length=500)
+    message: str = Field(
+        min_length=1, max_length=8_000, description="Untrusted: the message being answered."
+    )
+    classification: ReplyCategory | None = None
+    previous_message: str | None = Field(
+        default=None, max_length=4_000, description="Our own earlier message in the thread, if any."
+    )
+
+
 class DraftOutreachInput(_Strict):
     lead: DraftLead
     recipient_first_name: str | None = Field(default=None, max_length=60)
+    reply_to: ReplyContext | None = None
     goal: str = Field(
         default="Introduce my services and ask whether a short conversation would be useful.",
         min_length=1,

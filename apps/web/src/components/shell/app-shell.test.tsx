@@ -87,7 +87,7 @@ describe("AppShell", () => {
   it("marks planned destinations as Soon (not just by colour)", () => {
     renderShell();
     const nav = screen.getByRole("navigation", { name: "Primary" });
-    expect(within(nav).getByRole("link", { name: /^Inbox/ })).toHaveTextContent("Soon");
+    expect(within(nav).getByRole("link", { name: /^Campaigns/ })).toHaveTextContent("Soon");
     expect(within(nav).getByRole("link", { name: /^Home/ })).not.toHaveTextContent("Soon");
     expect(within(nav).getByRole("link", { name: /^Leads/ })).not.toHaveTextContent("Soon");
   });
@@ -100,7 +100,7 @@ describe("AppShell", () => {
       "aria-pressed",
       "true",
     );
-    expect(screen.getByRole("link", { name: "Inbox (coming soon)" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Campaigns (coming soon)" })).toBeInTheDocument();
     expect(window.localStorage.getItem("fos-sidebar-collapsed")).toBe("1");
     unmount();
     resetLocalStoreForTests();

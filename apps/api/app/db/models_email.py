@@ -107,6 +107,18 @@ class Conversation(TenantMixin, Timestamps, Base):
             "classification_confidence IS NULL OR (classification_confidence >= 0 AND classification_confidence <= 1)",
             name="confidence_range",
         ),
+        CheckConstraint(
+            "review_reason IS NULL OR review_reason IN ("
+            + ", ".join(f"'{r}'" for r in domain.REVIEW_REASONS)
+            + ")",
+            name="review_reason_valid",
+        ),
+        CheckConstraint(
+            "classification_source IS NULL OR classification_source IN ("
+            + ", ".join(f"'{r}'" for r in domain.CLASSIFICATION_SOURCES)
+            + ")",
+            name="classification_source_valid",
+        ),
         tenant_fk("conversations", "email_account_id", "email_accounts", ondelete="CASCADE"),
         tenant_fk("conversations", "lead_id", "leads"),
         tenant_fk("conversations", "contact_id", "contacts"),
@@ -126,6 +138,14 @@ class Conversation(TenantMixin, Timestamps, Base):
     classification: Mapped[str | None] = mapped_column(String(20))
     classification_confidence: Mapped[float | None] = mapped_column(Float)
     classification_explanation: Mapped[str | None] = mapped_column(String(1000))
+    # Where the classification came from and whether a person must look at it (MVP Prompt 10).
+    classification_source: Mapped[str | None] = mapped_column(String(20))
+    classification_evidence: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    # The inbound message the classification describes (no foreign key: it is a pointer, not ownership).
+    classified_message_id: Mapped[uuid.UUID | None] = mapped_column(Uuid)
+    classified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    needs_review: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    review_reason: Mapped[str | None] = mapped_column(String(30))
     is_sample: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
 
@@ -163,6 +183,8 @@ class Message(TenantMixin, Base):
     snippet: Mapped[str | None] = mapped_column(String(500))
     attachments: Mapped[list[dict[str, Any]]] = mapped_column(JSON, nullable=False, default=list)
     draft_id: Mapped[uuid.UUID | None] = mapped_column(Uuid)
+    # A delivery-failure notice from the mail system (not a person's reply).
+    is_bounce: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     # Why a delivery failed or is unknown ("rate_limited", "timeout", ...). A code, never a message.
     delivery_error_code: Mapped[str | None] = mapped_column(String(60))
     sent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
@@ -170,6 +192,61 @@ class Message(TenantMixin, Base):
         DateTime(timezone=True), nullable=False, default=utcnow
     )
     is_sample: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+
+class MessageBody(TenantMixin, Base):
+    """The stored text of a message, kept apart from its metadata so retention can be decided (and enforced) separately.
+
+    ``body_html`` is ALWAYS the sanitised form (``app.mailbox.sanitize``); the original HTML is never stored. Deleting a
+    message, a mailbox's synced mail or the workspace removes the body with it.
+    """
+
+    __tablename__ = "message_bodies"
+    __table_args__ = (
+        UniqueConstraint("message_id", name="uq_message_bodies_message"),
+        tenant_fk("message_bodies", "message_id", "messages", ondelete="CASCADE"),
+    )
+
+    id: Mapped[uuid.UUID] = pk_column()
+    message_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    body_text: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    body_html: Mapped[str | None] = mapped_column(Text)
+    text_truncated: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    images_blocked: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    sanitizer_version: Mapped[str | None] = mapped_column(String(10))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=utcnow
+    )
+
+
+class EmailJob(TenantMixin, Timestamps, Base):
+    """Background work on one message (classification). One row per (message, kind), so enqueueing twice is harmless."""
+
+    __tablename__ = "email_jobs"
+    __table_args__ = (
+        UniqueConstraint("message_id", "kind", name="uq_email_jobs_message_kind"),
+        check_in("kind", domain.EMAIL_JOB_KINDS),
+        check_in("status", domain.EMAIL_JOB_STATUSES),
+        CheckConstraint("attempts >= 0 AND max_attempts >= 1", name="attempts_valid"),
+        tenant_fk("email_jobs", "conversation_id", "conversations", ondelete="CASCADE"),
+        tenant_fk("email_jobs", "message_id", "messages", ondelete="CASCADE"),
+        Index("ix_email_jobs_status_run_after", "status", "run_after"),
+    )
+
+    id: Mapped[uuid.UUID] = pk_column()
+    kind: Mapped[str] = mapped_column(String(20), nullable=False, default="classify")
+    conversation_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    message_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    status: Mapped[str] = mapped_column(String(10), nullable=False, default="queued")
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    max_attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=3)
+    run_after: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=utcnow
+    )
+    # A worker holds the job until this instant; a crashed worker's job becomes claimable again afterwards.
+    locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_error_code: Mapped[str | None] = mapped_column(String(40))
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class Draft(TenantMixin, Timestamps, Base):

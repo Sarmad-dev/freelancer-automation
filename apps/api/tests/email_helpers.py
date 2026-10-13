@@ -14,6 +14,7 @@ from app.mailbox.gmail import REQUIRED_SCOPES
 from app.mailbox.registry import ConnectorRegistry
 from app.mailbox.types import (
     AccountProfile,
+    AttachmentInfo,
     ConnectorManifest,
     MessageBody,
     OutgoingMessage,
@@ -55,17 +56,24 @@ def remote(
     subject: str | None = "Hello",
     when: datetime = NOW,
     unread: bool = True,
+    text: str | None = None,
+    html: str | None = None,
+    attachments: tuple[AttachmentInfo, ...] = (),
+    sender: str | None = None,
 ) -> RemoteMessage:
     return RemoteMessage(
         provider_message_id=mid,
         provider_thread_id=thread,
         direction=direction,
-        from_address=other if direction == "inbound" else GMAIL_ADDRESS,
+        from_address=(sender or other) if direction == "inbound" else GMAIL_ADDRESS,
         to_addresses=(GMAIL_ADDRESS,) if direction == "inbound" else (other,),
         subject=subject,
         snippet=f"snippet of {mid}",
         sent_at=when,
         unread=unread and direction == "inbound",
+        body_text=text,
+        body_html=html,
+        attachments=attachments,
     )
 
 
@@ -194,3 +202,9 @@ def connect_gmail(client: TestClient, wid: str, fake: FakeProvider) -> dict[str,
     assert res.status_code == 303 and "email=connected" in res.headers["location"], res.headers
     accounts = client.get(ws_url(wid, "/accounts")).json()
     return next(a for a in accounts if a["provider"] == "gmail")
+
+
+def sync_page(
+    *messages: RemoteMessage, cursor: str | None = "hist:200", done: bool = True, skipped: int = 0
+) -> SyncPage:
+    return SyncPage(tuple(messages), cursor, done, skipped)

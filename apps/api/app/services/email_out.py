@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+import uuid
+
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.db.models_crm import KnowledgeItem
 from app.db.models_email import Draft, EmailAccount, Message
 from app.mailbox.connector import EmailConnector
-from app.schemas.drafts import DraftOut, MessageStateOut
+from app.schemas.drafts import DraftFactOut, DraftOut, MessageStateOut
 from app.schemas.email import EmailAccountOut, ProviderOut, ScopeOut
 from app.services import drafts as draft_service
 from app.services.email_accounts import friendly_error
@@ -67,6 +71,37 @@ def message_out(message: Message) -> MessageStateOut:
     )
 
 
+def _facts(db: Session, draft: Draft) -> list[DraftFactOut]:
+    ids: list[uuid.UUID] = []
+    for raw in draft.facts_used or []:
+        try:
+            ids.append(uuid.UUID(str(raw)))
+        except ValueError:
+            continue
+    if not ids:
+        return []
+    found = {
+        k.id: k
+        for k in db.scalars(
+            select(KnowledgeItem).where(
+                KnowledgeItem.workspace_id == draft.workspace_id, KnowledgeItem.id.in_(ids)
+            )
+        )
+    }
+    out: list[DraftFactOut] = []
+    for fid in ids:
+        item = found.get(fid)
+        out.append(
+            DraftFactOut(
+                id=fid,
+                title=item.title if item else "(a fact that was removed)",
+                kind=item.kind if item else "other",
+                still_approved=bool(item and item.status == "approved" and item.is_enabled),
+            )
+        )
+    return out
+
+
 def draft_out(db: Session, draft: Draft, message: Message | None = None) -> DraftOut:
     message = message or draft_service.get_message(db, draft.workspace_id, draft.id)
     return DraftOut(
@@ -81,6 +116,7 @@ def draft_out(db: Session, draft: Draft, message: Message | None = None) -> Draf
         author=draft.author,
         version=draft.version,
         facts_used=[str(f) for f in (draft.facts_used or [])],
+        facts=_facts(db, draft),
         approved_at=draft.approved_at,
         approval_is_current=draft_service.approval_is_current(draft),
         sent_at=draft.sent_at,

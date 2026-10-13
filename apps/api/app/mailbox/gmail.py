@@ -574,6 +574,7 @@ def _to_remote(raw: Any, own_address: str) -> RemoteMessage | None:
         return None
     outbound = "SENT" in labels or sender[0] == own_address
     snippet = raw.get("snippet")
+    body_text, body_html = _bodies(payload)
     return RemoteMessage(
         provider_message_id=mid,
         provider_thread_id=tid,
@@ -585,6 +586,8 @@ def _to_remote(raw: Any, own_address: str) -> RemoteMessage | None:
         sent_at=sent_at,
         attachments=_attachments(payload),
         unread="UNREAD" in labels,
+        body_text=body_text or None,
+        body_html=body_html,
     )
 
 

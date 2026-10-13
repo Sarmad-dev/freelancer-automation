@@ -15,6 +15,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app import audit
+from app.config import get_settings
 from app.db.models import Membership
 from app.db.models_crm import Contact
 from app.db.models_email import Conversation, EmailAccount, Message, MessageBody
@@ -23,6 +24,7 @@ from app.mailbox import signals
 from app.mailbox.sanitize import SANITIZER_VERSION, prepare_body
 from app.mailbox.types import RemoteMessage
 from app.services import email_jobs, suppression
+from app.workflows import events as workflow_events
 
 
 def store_body(db: Session, workspace_id: uuid.UUID, message: Message, rm: RemoteMessage) -> bool:
@@ -163,3 +165,14 @@ def on_new_message(
     email_jobs.enqueue(db, workspace_id, conversation.id, message.id, now=now)
     if is_reply(db, conversation, message):
         _notify_reply(db, workspace_id, conversation, message)
+        # Workflows listening for replies are queued here and run by the worker (never inside this request).
+        workflow_events.emit(
+            db,
+            get_settings(),
+            workspace_id,
+            "reply_received",
+            "conversation",
+            conversation.id,
+            str(message.id),
+            now,
+        )

@@ -672,17 +672,25 @@ def seed_demo(db: DbSession) -> tuple[bool, uuid.UUID | None]:
     db.add(wf)
     db.flush()
     nodes = [
-        {"key": "trigger", "type": "trigger", "config": {"event": "lead.created"}},
+        {"key": "trigger", "type": "trigger", "config": {"event": "lead_created"}},
         {"key": "assess", "type": "ai_assess_fit", "config": {}},
         {"key": "draft", "type": "ai_draft", "config": {}},
-        {"key": "approve", "type": "approval_gate", "config": {"expires_hours": 48}},
+        {
+            "key": "approve",
+            "type": "approval_gate",
+            "config": {"message": "Review the draft before it is sent.", "expires_hours": 48},
+        },
         {"key": "send", "type": "send_email", "config": {}},
+        {"key": "done", "type": "end", "config": {"outcome": "success"}},
+        {"key": "rejected", "type": "end", "config": {"outcome": "success", "reason": "Not sent"}},
     ]
     edges = [
         {"key": "e1", "source": "trigger", "target": "assess"},
         {"key": "e2", "source": "assess", "target": "draft"},
         {"key": "e3", "source": "draft", "target": "approve"},
-        {"key": "e4", "source": "approve", "target": "send"},
+        {"key": "e4", "source": "approve", "target": "send", "branch": "approved"},
+        {"key": "e5", "source": "approve", "target": "rejected", "branch": "rejected"},
+        {"key": "e6", "source": "send", "target": "done"},
     ]
     ver = WorkflowVersion(
         workspace_id=wid,
@@ -691,6 +699,9 @@ def seed_demo(db: DbSession) -> tuple[bool, uuid.UUID | None]:
         checksum=definition_checksum(nodes, edges),
         created_by_user_id=user.id,
         note="Seeded starter template",
+        valid=True,
+        issues=[],
+        trigger_event="lead_created",
     )
     db.add(ver)
     db.flush()
@@ -715,6 +726,7 @@ def seed_demo(db: DbSession) -> tuple[bool, uuid.UUID | None]:
                 edge_key=e["key"],
                 source_key=e["source"],
                 target_key=e["target"],
+                branch=e.get("branch"),
             )
         )
     run = WorkflowRun(
@@ -724,13 +736,32 @@ def seed_demo(db: DbSession) -> tuple[bool, uuid.UUID | None]:
         status="waiting_approval",
         mode="test",
         trigger_type="manual",
-        trigger_payload={"lead": "demo"},
+        trigger_payload={"event": "manual", "subject_type": "lead"},
         idempotency_key="seed-run-1",
         correlation_id=uuid.uuid4().hex,
         started_at=now,
+        subject_type="lead",
+        subject_id=leads["northwind"].id,
+        current_node_key="approve",
+        context={"lead_id": str(leads["northwind"].id), "draft_id": str(draft.id)},
+        steps_taken=3,
     )
     db.add(run)
     db.flush()
+    for done_key in ("trigger", "assess", "draft"):
+        db.add(
+            WorkflowStepRun(
+                workspace_id=wid,
+                run_id=run.id,
+                node_key=done_key,
+                attempt=1,
+                status="succeeded",
+                started_at=now,
+                finished_at=now,
+                port="next",
+                output_summary={"note": "seeded"},
+            )
+        )
     step = WorkflowStepRun(
         workspace_id=wid,
         run_id=run.id,
@@ -752,7 +783,11 @@ def seed_demo(db: DbSession) -> tuple[bool, uuid.UUID | None]:
             target_type="lead",
             target_id=str(leads["northwind"].id),
             payload_hash=draft.content_hash,
-            proposed_payload={"to": "redacted", "subject": draft.subject},
+            proposed_payload={
+                "summary": "Review the draft before it is sent.",
+                "node": "approve",
+                "mode": "test",
+            },
             status="pending",
             requested_by_user_id=None,
             expires_at=now + timedelta(hours=48),

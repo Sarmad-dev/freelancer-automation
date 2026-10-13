@@ -225,11 +225,7 @@ def validate_definition(definition: WorkflowDefinition) -> Report:
             continue
         for port in spec.ports:
             if (n.id, port) not in used:
-                what = (
-                    "the next step"
-                    if port == "next"
-                    else f'the "{port}" path'
-                )
+                what = "the next step" if port == "next" else f'the "{port}" path'
                 issues.append(
                     Issue(
                         "unhandled_branch",
@@ -331,9 +327,7 @@ def _meet(arrivals: list[frozenset[str]]) -> frozenset[str]:
     return out
 
 
-def _missing_input(
-    report: Report, node: NodeDef, missing: list[str], have: frozenset[str]
-) -> None:
+def _missing_input(report: Report, node: NodeDef, missing: list[str], have: frozenset[str]) -> None:
     if node.type == "send_email" and FACT_APPROVED_DRAFT in missing:
         report.issues.append(
             Issue(
@@ -359,9 +353,7 @@ def _missing_input(
     )
 
 
-def _topological(
-    nodes: set[str], outgoing: dict[str, list[tuple[str, str]]]
-) -> list[str] | None:
+def _topological(nodes: set[str], outgoing: dict[str, list[tuple[str, str]]]) -> list[str] | None:
     indegree = {n: 0 for n in nodes}
     for source, targets in outgoing.items():
         if source not in nodes:

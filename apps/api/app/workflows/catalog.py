@@ -113,10 +113,16 @@ class _Config(BaseModel):
 
 class _Retryable(_Config):
     max_attempts: int | None = Field(
-        default=None, ge=1, le=5, description="Attempts before the run fails (default per node type)."
+        default=None,
+        ge=1,
+        le=5,
+        description="Attempts before the run fails (default per node type).",
     )
     timeout_seconds: int | None = Field(
-        default=None, ge=5, le=300, description="Longest this step may take (default per node type)."
+        default=None,
+        ge=5,
+        le=300,
+        description="Longest this step may take (default per node type).",
     )
 
 
@@ -184,16 +190,23 @@ class ClassifyReplyConfig(_Retryable):
 class AiDraftConfig(_Retryable):
     mode: Literal["outreach", "reply"] = "outreach"
     goal: str | None = Field(
-        default=None, max_length=300, description="What the message should achieve (you write this, not the AI)."
+        default=None,
+        max_length=300,
+        description="What the message should achieve (you write this, not the AI).",
     )
 
 
 class UpsertRecordConfig(_Retryable):
     action: Literal["update_lead", "create_opportunity"]
     stage_key: str | None = Field(
-        default=None, min_length=1, max_length=40, description="A pipeline stage key, e.g. contacted."
+        default=None,
+        min_length=1,
+        max_length=40,
+        description="A pipeline stage key, e.g. contacted.",
     )
-    title: str | None = Field(default=None, max_length=200, description="Opportunity title (defaults to the lead's).")
+    title: str | None = Field(
+        default=None, max_length=200, description="Opportunity title (defaults to the lead's)."
+    )
 
     @model_validator(mode="after")
     def _check(self) -> UpsertRecordConfig:
@@ -252,12 +265,15 @@ def _none(_: Any) -> frozenset[str]:
     return frozenset()
 
 
+ConfigModel = type[BaseModel]
+
+
 @dataclass(frozen=True)
 class NodeSpec:
     type: str
     label: str
     description: str
-    model: type[BaseModel]
+    model: ConfigModel
     ports: tuple[str, ...] = ("next",)
     # True when the step changes records or leaves the system. In test mode these are simulated.
     side_effect: bool = False
@@ -352,7 +368,9 @@ NODE_SPECS: dict[str, NodeSpec] = {
         NodeSpec(
             "create_task",
             "Create task",
-            "Adds a task (and reminder) for you. Placeholders: " + ", ".join("{" + p + "}" for p in PLACEHOLDERS) + ".",
+            "Adds a task (and reminder) for you. Placeholders: "
+            + ", ".join("{" + p + "}" for p in PLACEHOLDERS)
+            + ".",
             CreateTaskConfig,
             attempts=2,
             needs=lambda c: _template_needs(c.title, c.description),
@@ -384,7 +402,9 @@ NODE_SPECS: dict[str, NodeSpec] = {
         NodeSpec(
             "notify",
             "Notify me",
-            "Sends you an in-app notification. Placeholders: " + ", ".join("{" + p + "}" for p in PLACEHOLDERS) + ".",
+            "Sends you an in-app notification. Placeholders: "
+            + ", ".join("{" + p + "}" for p in PLACEHOLDERS)
+            + ".",
             NotifyConfig,
             attempts=2,
             needs=lambda c: _template_needs(c.title, c.message),

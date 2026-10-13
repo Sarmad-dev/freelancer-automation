@@ -345,3 +345,8 @@ def run_worker(app: FastAPI, *, limit: int = 25, workspace_id: uuid.UUID | None 
         )
 
     return process_batch(get_sessionmaker(), make_ai, limit=limit, workspace_id=workspace_id)
+
+
+# Public names for the engine's classify-reply step (it classifies a conversation the same way the inbox worker does).
+body_for = _body_for
+previous_outbound = _previous_outbound

@@ -19,6 +19,7 @@ from app.mailer import ConsoleMailer, DisabledMailer, Mailer
 from app.ratelimit import MemoryRateLimiter, RateLimiter, RedisRateLimiter
 from app.routers import (
     ai,
+    approvals,
     auth,
     companies,
     contacts,
@@ -38,6 +39,8 @@ from app.routers import (
     suppressions,
     tags,
     tasks,
+    workflow_runs,
+    workflows,
     workspaces,
 )
 from app.security.credentials import build_store
@@ -174,6 +177,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(inbox.router)
     app.include_router(drafts.router)
     app.include_router(suppressions.router)
+    app.include_router(workflows.router)
+    app.include_router(workflow_runs.router)
+    app.include_router(approvals.router)
     return app
 
 

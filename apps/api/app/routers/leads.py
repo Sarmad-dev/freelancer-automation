@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Depends, Query, Request, Response, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Query, Request, Response, status
 from sqlalchemy import Select, exists, func, or_, select
 
 from app.api.pagination import Page, PageParams, page_params, paginate
@@ -33,6 +33,8 @@ from app.schemas.leads import (
 from app.services import leads as svc
 from app.services.fit_scoring import BAND_POSSIBLE, BAND_STRONG, Scorer
 from app.services.lead_export import MAX_EXPORT_ROWS, export_csv
+from app.workflows import engine as workflow_engine
+from app.workflows import events as workflow_events
 
 router = APIRouter(prefix="/api/v1/workspaces/{workspace_id}/leads", tags=["leads"])
 
@@ -244,13 +246,23 @@ def export_leads(
     summary="Create a lead (manual entry; no external source needed)",
 )
 def create_lead(
-    body: LeadCreate, ctx: WorkspaceDep, db: DbDep, request: Request, settings: SettingsDep
+    body: LeadCreate,
+    ctx: WorkspaceDep,
+    db: DbDep,
+    request: Request,
+    settings: SettingsDep,
+    background: BackgroundTasks,
 ) -> LeadDetail:
     require_owner(ctx)
     scorer = Scorer.load(db, ctx)
     lead = svc.create_lead(db, ctx, body, scorer)
     audit_event(db, ctx, request, settings, "leads.created", "lead", lead.id)
+    queued = workflow_events.emit(
+        db, settings, ctx.workspace_id, "lead_created", "lead", lead.id, str(lead.id), utcnow()
+    )
     db.commit()
+    if queued:  # workflows listening for new leads run after the response, never inside it
+        background.add_task(workflow_engine.run_worker, request.app, workspace_id=ctx.workspace_id)
     return svc.lead_detail(db, ctx, lead, scorer)
 
 

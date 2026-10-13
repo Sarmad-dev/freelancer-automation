@@ -40,6 +40,7 @@ from app.schemas.inbox import DeleteMailOut
 from app.services import email_accounts as svc
 from app.services import email_jobs, inbox
 from app.services.email_out import account_out, provider_out
+from app.workflows import engine as workflow_engine
 
 router = APIRouter(prefix="/api/v1/workspaces/{workspace_id}/email", tags=["email"])
 
@@ -232,6 +233,8 @@ def sync_account(
     pending = _pending_jobs(db, ctx)
     if pending:  # classify new replies after the response is sent: syncing never waits on the AI
         background.add_task(email_jobs.run_worker, request.app, workspace_id=ctx.workspace_id)
+    if summary.messages_created:  # workflows that listen for replies were queued while storing them
+        background.add_task(workflow_engine.run_worker, request.app, workspace_id=ctx.workspace_id)
     return SyncOut(
         account=account_out(account),
         conversations_created=summary.conversations_created,

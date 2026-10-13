@@ -16,7 +16,12 @@ def node(id_: str, type_: str, **config: Any) -> dict[str, Any]:
 
 
 def edge(src: str, dst: str, branch: str | None = None, id_: str | None = None) -> dict[str, Any]:
-    return {"id": id_ or f"{src}-{dst}-{branch or 'next'}", "source": src, "target": dst, "branch": branch}
+    return {
+        "id": id_ or f"{src}-{dst}-{branch or 'next'}",
+        "source": src,
+        "target": dst,
+        "branch": branch,
+    }
 
 
 def check(nodes: list[dict[str, Any]], edges: list[dict[str, Any]]) -> Report:
@@ -128,9 +133,7 @@ def test_only_one_trigger_and_nothing_leads_back_into_it() -> None:
 def test_duplicate_ids_and_dangling_connections_are_reported() -> None:
     dup = check([TRIGGER, TRIGGER, END], [edge("t", "end")])
     assert "duplicate_node_id" in codes(dup)
-    dup_edges = check(
-        [TRIGGER, END], [edge("t", "end", id_="e1"), edge("t", "end", id_="e1")]
-    )
+    dup_edges = check([TRIGGER, END], [edge("t", "end", id_="e1"), edge("t", "end", id_="e1")])
     assert "duplicate_edge_id" in codes(dup_edges)
     dangling = check([TRIGGER, END], [edge("t", "ghost"), edge("ghost", "end")])
     assert "dangling_edge" in codes(dangling)
@@ -147,7 +150,9 @@ def test_ports_must_exist_and_each_can_be_used_once() -> None:
         [edge("t", "n", "yes"), edge("n", "end")],
     )
     assert "unknown_port" in codes(wrong_port)
-    out_of_end = check([TRIGGER, END, node("n", "notify", title="x")], [edge("t", "end"), edge("end", "n")])
+    out_of_end = check(
+        [TRIGGER, END, node("n", "notify", title="x")], [edge("t", "end"), edge("end", "n")]
+    )
     assert "unknown_port" in codes(out_of_end)
     two_paths = check(
         [TRIGGER, node("a", "notify", title="a"), node("b", "notify", title="b"), END],
@@ -177,7 +182,9 @@ def test_unreachable_nodes_and_cycles_are_rejected() -> None:
         [edge("t", "a"), edge("a", "b"), edge("b", "a")],
     )
     assert "cycle" in codes(loop)
-    self_loop = check([TRIGGER, node("a", "notify", title="a"), END], [edge("t", "a"), edge("a", "a")])
+    self_loop = check(
+        [TRIGGER, node("a", "notify", title="a"), END], [edge("t", "a"), edge("a", "a")]
+    )
     assert "cycle" in codes(self_loop)
 
 
@@ -273,7 +280,12 @@ def test_a_step_needs_what_the_trigger_and_earlier_steps_provide() -> None:
     )
     assert "missing_input" in codes(template_needs_fact)
     cond_needs_fact = check(
-        [TRIGGER, node("c", "condition", field="fit.rating", op="eq", value="strong"), END, node("e2", "end")],
+        [
+            TRIGGER,
+            node("c", "condition", field="fit.rating", op="eq", value="strong"),
+            END,
+            node("e2", "end"),
+        ],
         [edge("t", "c"), edge("c", "end", "true"), edge("c", "e2", "false")],
     )
     assert "missing_input" in codes(cond_needs_fact)
@@ -300,8 +312,21 @@ def test_a_fact_must_arrive_on_every_path_not_just_one() -> None:
 def test_sending_needs_an_approval_gate_on_every_path() -> None:
     # draft -> gate -> send is fine
     ok = check(
-        [TRIGGER, node("d", "ai_draft"), node("g", "approval_gate"), node("s", "send_email"), END, node("r", "end")],
-        [edge("t", "d"), edge("d", "g"), edge("g", "s", "approved"), edge("g", "r", "rejected"), edge("s", "end")],
+        [
+            TRIGGER,
+            node("d", "ai_draft"),
+            node("g", "approval_gate"),
+            node("s", "send_email"),
+            END,
+            node("r", "end"),
+        ],
+        [
+            edge("t", "d"),
+            edge("d", "g"),
+            edge("g", "s", "approved"),
+            edge("g", "r", "rejected"),
+            edge("s", "end"),
+        ],
     )
     assert ok.valid, ok.issues
     # draft -> send (no gate)
@@ -312,14 +337,40 @@ def test_sending_needs_an_approval_gate_on_every_path() -> None:
     assert "send_without_approval" in codes(no_gate)
     # gate first, draft written after approval: the approval was for nothing
     gate_before_draft = check(
-        [TRIGGER, node("g", "approval_gate"), node("d", "ai_draft"), node("s", "send_email"), END, node("r", "end")],
-        [edge("t", "g"), edge("g", "d", "approved"), edge("g", "r", "rejected"), edge("d", "s"), edge("s", "end")],
+        [
+            TRIGGER,
+            node("g", "approval_gate"),
+            node("d", "ai_draft"),
+            node("s", "send_email"),
+            END,
+            node("r", "end"),
+        ],
+        [
+            edge("t", "g"),
+            edge("g", "d", "approved"),
+            edge("g", "r", "rejected"),
+            edge("d", "s"),
+            edge("s", "end"),
+        ],
     )
     assert "send_without_approval" in codes(gate_before_draft)
     # send on the rejected path
     on_rejected = check(
-        [TRIGGER, node("d", "ai_draft"), node("g", "approval_gate"), node("s", "send_email"), END, node("a", "end")],
-        [edge("t", "d"), edge("d", "g"), edge("g", "a", "approved"), edge("g", "s", "rejected"), edge("s", "end")],
+        [
+            TRIGGER,
+            node("d", "ai_draft"),
+            node("g", "approval_gate"),
+            node("s", "send_email"),
+            END,
+            node("a", "end"),
+        ],
+        [
+            edge("t", "d"),
+            edge("d", "g"),
+            edge("g", "a", "approved"),
+            edge("g", "s", "rejected"),
+            edge("s", "end"),
+        ],
     )
     assert "send_without_approval" in codes(on_rejected)
     # a second draft after the gate needs its own approval
@@ -380,7 +431,9 @@ def test_validation_does_not_stop_at_the_first_problem_and_messages_name_the_nod
         node("n", "notify", title="{nope}"),
     ]
     report = check(nodes, [edge("t", "x"), edge("x", "n")])
-    assert {"missing_config", "unknown_placeholder", "unhandled_branch", "missing_end"} <= set(codes(report))
+    assert {"missing_config", "unknown_placeholder", "unhandled_branch", "missing_end"} <= set(
+        codes(report)
+    )
     assert any("Chase up" in i.message for i in report.issues if i.code == "missing_config")
 
 

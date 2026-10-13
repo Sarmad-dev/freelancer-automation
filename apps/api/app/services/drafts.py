@@ -193,6 +193,11 @@ def update_draft(db: Session, ctx: WorkspaceContext, draft: Draft, patch: DraftP
         draft.approved_content_hash = None
         draft.approved_at = None
         draft.approved_by_user_id = None
+        if {"to_address", "subject", "body_text"} & set(changed):
+            # A workflow may be waiting for someone to approve the old text: that request no longer applies.
+            from app.workflows import approvals
+
+            approvals.invalidate_for_draft(db, ctx.workspace_id, draft.id, "draft_edited")
     return changed
 
 

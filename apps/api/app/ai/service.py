@@ -340,12 +340,17 @@ class AiService:
         if inp.reply_to is not None:
             answered = _prep(inp.reply_to.message, 8_000, warnings, "message") or ""
             earlier = _prep(inp.reply_to.previous_message, 4_000, warnings, "previous_message")
-            if untrusted.injection_signals(answered):
+            suspicious = bool(untrusted.injection_signals(answered))
+            if suspicious:
                 warnings.append("injection_suspected")
             reply_parts["message_being_answered"] = answered
             if earlier:
                 reply_parts["our_previous_message"] = earlier
-            reply_text = f"{inp.reply_to.subject or ''} {answered} {earlier or ''}"
+            # A draft may repeat a time or figure the other person wrote, but never when their message is trying to steer us:
+            # then only our own approved facts count as support, so an attacker cannot smuggle a commitment into the reply.
+            reply_text = (
+                "" if suspicious else f"{inp.reply_to.subject or ''} {answered} {earlier or ''}"
+            )
         # A reply may repeat what the other person wrote (a time they proposed, a figure they quoted), nothing else new.
         allowed = " ".join(
             [

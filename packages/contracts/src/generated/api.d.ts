@@ -503,6 +503,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workspaces/{workspace_id}/email/accounts/{account_id}/mail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete every message synced from this mailbox (stored bodies included) */
+        delete: operations["delete_synced_mail_api_v1_workspaces__workspace_id__email_accounts__account_id__mail_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workspaces/{workspace_id}/email/accounts/{account_id}/sync": {
         parameters: {
             query?: never;
@@ -650,6 +667,142 @@ export interface paths {
         };
         /** Download the error report (rows that failed validation or were skipped as duplicates) */
         get: operations["error_report_api_v1_workspaces__workspace_id__imports__job_id__errors_csv_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspace_id}/inbox/conversations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List conversations */
+        get: operations["list_conversations_api_v1_workspaces__workspace_id__inbox_conversations_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspace_id}/inbox/conversations/{conversation_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A thread with its messages */
+        get: operations["get_conversation_api_v1_workspaces__workspace_id__inbox_conversations__conversation_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspace_id}/inbox/conversations/{conversation_id}/classification": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Set (or confirm) the category yourself */
+        put: operations["set_classification_api_v1_workspaces__workspace_id__inbox_conversations__conversation_id__classification_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspace_id}/inbox/conversations/{conversation_id}/classify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Classify the latest reply again (runs in the background) */
+        post: operations["reclassify_api_v1_workspaces__workspace_id__inbox_conversations__conversation_id__classify_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspace_id}/inbox/conversations/{conversation_id}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark a conversation read */
+        post: operations["mark_read_api_v1_workspaces__workspace_id__inbox_conversations__conversation_id__read_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspace_id}/inbox/conversations/{conversation_id}/suggest-reply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Draft a reply with AI (never sent automatically) */
+        post: operations["suggest_reply_api_v1_workspaces__workspace_id__inbox_conversations__conversation_id__suggest_reply_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspace_id}/inbox/conversations/{conversation_id}/unread": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark a conversation unread */
+        post: operations["mark_unread_api_v1_workspaces__workspace_id__inbox_conversations__conversation_id__unread_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspace_id}/inbox/counts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Unread and needs-review counts */
+        get: operations["get_counts_api_v1_workspaces__workspace_id__inbox_counts_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1614,6 +1767,15 @@ export interface components {
             /** Window Hours */
             window_hours: number;
         };
+        /** AttachmentOut */
+        AttachmentOut: {
+            /** Filename */
+            filename: string;
+            /** Mime Type */
+            mime_type: string;
+            /** Size */
+            size: number | null;
+        };
         /** AuthConfig */
         AuthConfig: {
             /** Password Reset Enabled */
@@ -1633,6 +1795,28 @@ export interface components {
              * @description Deals in this column that have no value yet.
              */
             unvalued: number;
+        };
+        /** BodyOut */
+        BodyOut: {
+            /**
+             * Available
+             * @description False when only the short preview was stored for this message.
+             */
+            available: boolean;
+            /**
+             * Html
+             * @description Sanitised HTML (allow-listed tags, no images, no styles). Show it only in a sandbox.
+             */
+            html: string | null;
+            /**
+             * Images Blocked
+             * @description The original message had images or other remote content that was removed.
+             */
+            images_blocked: boolean;
+            /** Text */
+            text: string;
+            /** Text Truncated */
+            text_truncated: boolean;
         };
         /** BudgetCriterion */
         BudgetCriterion: {
@@ -1670,6 +1854,45 @@ export interface components {
             tags_added: number;
             /** Tags Removed */
             tags_removed: number;
+        };
+        /** ClassificationOut */
+        ClassificationOut: {
+            /** Category */
+            category: ("interested" | "question" | "objection" | "not_now" | "referral" | "out_of_office" | "unsubscribe" | "irrelevant") | null;
+            /** Classified At */
+            classified_at: string | null;
+            /** Confidence */
+            confidence: number | null;
+            /**
+             * Evidence
+             * @description Exact quotes from the reply that support the category.
+             */
+            evidence: string[];
+            /** Explanation */
+            explanation: string | null;
+            /** Needs Review */
+            needs_review: boolean;
+            /** Review Reason */
+            review_reason: ("low_confidence" | "fallback" | "injection_suspected" | "classification_failed" | "unsubscribe_unconfirmed") | null;
+            /**
+             * Review Text
+             * @description Why a person needs to look at it, in plain words.
+             */
+            review_text: string | null;
+            /** Source */
+            source: ("model" | "demo_ai" | "rules_fallback" | "manual") | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "none" | "pending" | "classified" | "failed";
+        };
+        /** ClassifyQueued */
+        ClassifyQueued: {
+            /** Message */
+            message: string;
+            /** Queued */
+            queued: boolean;
         };
         /** CompanyCreate */
         CompanyCreate: {
@@ -1921,6 +2144,92 @@ export interface components {
             /** Version */
             version: number;
         };
+        /** ConversationDetail */
+        ConversationDetail: {
+            /** Account Email */
+            account_email: string;
+            /**
+             * Account Id
+             * Format: uuid
+             */
+            account_id: string;
+            classification: components["schemas"]["ClassificationOut"];
+            company: components["schemas"]["CompanyRef"] | null;
+            counterpart: components["schemas"]["CounterpartOut"];
+            /** @description The open reply draft for this thread, if there is one. */
+            draft: components["schemas"]["DraftOut"] | null;
+            /** Has Draft */
+            has_draft: boolean;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Is Demo */
+            is_demo: boolean;
+            /** Last Direction */
+            last_direction: ("inbound" | "outbound") | null;
+            /** Last Message At */
+            last_message_at: string | null;
+            /** Last Preview */
+            last_preview: string | null;
+            lead: components["schemas"]["LeadRef"] | null;
+            /** Message Count */
+            message_count: number;
+            /** Messages */
+            messages: components["schemas"]["ThreadMessage"][];
+            stop: components["schemas"]["StopOut"] | null;
+            /** Subject */
+            subject: string | null;
+            /** Unread */
+            unread: boolean;
+        };
+        /** ConversationSummary */
+        ConversationSummary: {
+            /** Account Email */
+            account_email: string;
+            /**
+             * Account Id
+             * Format: uuid
+             */
+            account_id: string;
+            classification: components["schemas"]["ClassificationOut"];
+            company: components["schemas"]["CompanyRef"] | null;
+            counterpart: components["schemas"]["CounterpartOut"];
+            /** Has Draft */
+            has_draft: boolean;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Is Demo */
+            is_demo: boolean;
+            /** Last Direction */
+            last_direction: ("inbound" | "outbound") | null;
+            /** Last Message At */
+            last_message_at: string | null;
+            /** Last Preview */
+            last_preview: string | null;
+            lead: components["schemas"]["LeadRef"] | null;
+            /** Message Count */
+            message_count: number;
+            stop: components["schemas"]["StopOut"] | null;
+            /** Subject */
+            subject: string | null;
+            /** Unread */
+            unread: boolean;
+        };
+        /** CounterpartOut */
+        CounterpartOut: {
+            /** Address */
+            address: string;
+            /**
+             * Name
+             * @description The contact's name when the address matches one.
+             */
+            name: string | null;
+        };
         /** CriterionResult */
         CriterionResult: {
             /** Evidence */
@@ -1943,6 +2252,13 @@ export interface components {
             reason: string;
             /** Weight */
             weight: number;
+        };
+        /** DeleteMailOut */
+        DeleteMailOut: {
+            /** Conversations */
+            conversations: number;
+            /** Messages */
+            messages: number;
         };
         /** DemoModeRequest */
         DemoModeRequest: {
@@ -1989,6 +2305,26 @@ export interface components {
             /** To Address */
             to_address?: string | null;
         };
+        /**
+         * DraftFactOut
+         * @description An approved profile fact an AI draft was written from.
+         */
+        DraftFactOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Kind */
+            kind: string;
+            /**
+             * Still Approved
+             * @description False when the fact was edited, disabled or deleted after the draft was written.
+             */
+            still_approved: boolean;
+            /** Title */
+            title: string;
+        };
         /** DraftOut */
         DraftOut: {
             /**
@@ -2014,6 +2350,8 @@ export interface components {
             created_at: string;
             /** Email Account Id */
             email_account_id: string | null;
+            /** Facts */
+            facts: components["schemas"]["DraftFactOut"][];
             /** Facts Used */
             facts_used: string[];
             /**
@@ -2483,6 +2821,15 @@ export interface components {
             /** Warnings */
             warnings: string[];
         };
+        /** InboxCounts */
+        InboxCounts: {
+            /** Needs Review */
+            needs_review: number;
+            /** Open */
+            open: number;
+            /** Unread */
+            unread: number;
+        };
         /** IndustriesStep */
         IndustriesStep: {
             /** Industries */
@@ -2851,6 +3198,16 @@ export interface components {
             /** Title */
             title?: string | null;
         };
+        /** LeadRef */
+        LeadRef: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Title */
+            title: string;
+        };
         /** LeadTagsPut */
         LeadTagsPut: {
             /** Tag Ids */
@@ -3135,6 +3492,17 @@ export interface components {
         Page_ContactOut_: {
             /** Items */
             items: components["schemas"]["ContactOut"][];
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+            /** Total */
+            total: number;
+        };
+        /** Page[ConversationSummary] */
+        Page_ConversationSummary_: {
+            /** Items */
+            items: components["schemas"]["ConversationSummary"][];
             /** Limit */
             limit: number;
             /** Offset */
@@ -3575,6 +3943,14 @@ export interface components {
              */
             step: "services";
         };
+        /** SetClassification */
+        SetClassification: {
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "interested" | "question" | "objection" | "not_now" | "referral" | "out_of_office" | "unsubscribe" | "irrelevant";
+        };
         /** SignInRequest */
         SignInRequest: {
             /** Email */
@@ -3627,6 +4003,44 @@ export interface components {
             /** Required */
             required: boolean;
         };
+        /**
+         * StopOut
+         * @description Contact has been stopped: nothing will be sent to this address.
+         */
+        StopOut: {
+            /** Address */
+            address: string;
+            /**
+             * Reason
+             * @enum {string}
+             */
+            reason: "unsubscribe" | "bounce" | "complaint" | "manual" | "replied_stop";
+            /**
+             * Since
+             * Format: date-time
+             */
+            since: string;
+            /** Text */
+            text: string;
+        };
+        /** SuggestReplyOut */
+        SuggestReplyOut: {
+            /**
+             * Ai Label
+             * @description How the text was produced, e.g. 'Demo AI: rule-based stand-in, not a real model'.
+             */
+            ai_label: string;
+            draft: components["schemas"]["DraftOut"];
+            /** Is Demo Ai */
+            is_demo_ai: boolean;
+            /**
+             * Regenerated
+             * @description True when an earlier AI draft for this thread was replaced.
+             */
+            regenerated: boolean;
+            /** Warnings */
+            warnings: string[];
+        };
         /** SummarySection */
         SummarySection: {
             /** Items */
@@ -3671,6 +4085,12 @@ export interface components {
         /** SyncOut */
         SyncOut: {
             account: components["schemas"]["EmailAccountOut"];
+            /**
+             * Classification Pending
+             * @description Replies waiting to be classified in the background (not waited for).
+             * @default 0
+             */
+            classification_pending: number;
             /** Complete */
             complete: boolean;
             /** Conversations Created */
@@ -3912,6 +4332,44 @@ export interface components {
             account: components["schemas"]["EmailAccountOut"];
             /** Ok */
             ok: boolean;
+        };
+        /** ThreadMessage */
+        ThreadMessage: {
+            /** Attachments */
+            attachments: components["schemas"]["AttachmentOut"][];
+            body: components["schemas"]["BodyOut"];
+            /** Delivery Error Code */
+            delivery_error_code: string | null;
+            /** Delivery Label */
+            delivery_label: string;
+            /**
+             * Delivery State
+             * @enum {string}
+             */
+            delivery_state: "demo" | "queued" | "sent" | "failed" | "unknown";
+            /**
+             * Direction
+             * @enum {string}
+             */
+            direction: "inbound" | "outbound";
+            /** From Address */
+            from_address: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Is Bounce */
+            is_bounce: boolean;
+            /**
+             * Sent At
+             * Format: date-time
+             */
+            sent_at: string;
+            /** Subject */
+            subject: string | null;
+            /** To Addresses */
+            to_addresses: string[];
         };
         /** TimezoneStep */
         TimezoneStep: {
@@ -6303,6 +6761,74 @@ export interface operations {
             };
         };
     };
+    delete_synced_mail_api_v1_workspaces__workspace_id__email_accounts__account_id__mail_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                account_id: string;
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeleteMailOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     sync_account_api_v1_workspaces__workspace_id__email_accounts__account_id__sync_post: {
         parameters: {
             query?: never;
@@ -7014,6 +7540,576 @@ export interface operations {
                 };
                 content: {
                     "text/csv": string;
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_conversations_api_v1_workspaces__workspace_id__inbox_conversations_get: {
+        parameters: {
+            query?: {
+                /** @description Subject, sender, preview, message text, contact name or lead title contains. */
+                q?: string | null;
+                unread?: boolean | null;
+                classification?: ("interested" | "question" | "objection" | "not_now" | "referral" | "out_of_office" | "unsubscribe" | "irrelevant" | "unclassified") | null;
+                needs_review?: boolean | null;
+                account_id?: string | null;
+                lead_id?: string | null;
+                status?: "open" | "archived";
+                /** @description Page size (1-100). */
+                limit?: number;
+                /** @description Rows to skip. */
+                offset?: number;
+                /** @description Comma-separated fields; prefix '-' for descending. */
+                sort?: string | null;
+            };
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_ConversationSummary_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_conversation_api_v1_workspaces__workspace_id__inbox_conversations__conversation_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationDetail"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    set_classification_api_v1_workspaces__workspace_id__inbox_conversations__conversation_id__classification_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetClassification"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationSummary"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    reclassify_api_v1_workspaces__workspace_id__inbox_conversations__conversation_id__classify_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClassifyQueued"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    mark_read_api_v1_workspaces__workspace_id__inbox_conversations__conversation_id__read_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationSummary"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    suggest_reply_api_v1_workspaces__workspace_id__inbox_conversations__conversation_id__suggest_reply_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description An earlier AI draft was replaced. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuggestReplyOut"];
+                };
+            };
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuggestReplyOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    mark_unread_api_v1_workspaces__workspace_id__inbox_conversations__conversation_id__unread_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationSummary"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_counts_api_v1_workspaces__workspace_id__inbox_counts_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboxCounts"];
                 };
             };
             /** @description Unauthorized */

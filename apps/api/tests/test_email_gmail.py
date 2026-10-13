@@ -332,6 +332,9 @@ def test_full_sync_pages_through_threads_and_normalises_messages() -> None:
         and m.unread
     )
     assert m.subject == "Hi" and m.snippet == "A short preview"
+    assert (
+        m.body_text == "hello" and m.body_html is None
+    )  # bodies are carried so the inbox can store the cleaned copy
     assert m.sent_at == datetime.fromtimestamp(1760000000, tz=UTC)
     assert [(a.filename, a.mime_type, a.size) for a in m.attachments] == [
         ("proposal.pdf", "application/pdf", 2048)

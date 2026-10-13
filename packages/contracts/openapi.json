@@ -311,6 +311,36 @@
         "title": "AiUsageSummary",
         "type": "object"
       },
+      "AttachmentOut": {
+        "properties": {
+          "filename": {
+            "title": "Filename",
+            "type": "string"
+          },
+          "mime_type": {
+            "title": "Mime Type",
+            "type": "string"
+          },
+          "size": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Size"
+          }
+        },
+        "required": [
+          "filename",
+          "mime_type",
+          "size"
+        ],
+        "title": "AttachmentOut",
+        "type": "object"
+      },
       "AuthConfig": {
         "properties": {
           "password_reset_enabled": {
@@ -361,6 +391,49 @@
           "items"
         ],
         "title": "BoardColumn",
+        "type": "object"
+      },
+      "BodyOut": {
+        "properties": {
+          "available": {
+            "description": "False when only the short preview was stored for this message.",
+            "title": "Available",
+            "type": "boolean"
+          },
+          "html": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Sanitised HTML (allow-listed tags, no images, no styles). Show it only in a sandbox.",
+            "title": "Html"
+          },
+          "images_blocked": {
+            "description": "The original message had images or other remote content that was removed.",
+            "title": "Images Blocked",
+            "type": "boolean"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "text_truncated": {
+            "title": "Text Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "available",
+          "text",
+          "html",
+          "text_truncated",
+          "images_blocked"
+        ],
+        "title": "BodyOut",
         "type": "object"
       },
       "BudgetCriterion": {
@@ -448,6 +521,166 @@
           "tags_removed"
         ],
         "title": "BulkTagResult",
+        "type": "object"
+      },
+      "ClassificationOut": {
+        "properties": {
+          "category": {
+            "anyOf": [
+              {
+                "enum": [
+                  "interested",
+                  "question",
+                  "objection",
+                  "not_now",
+                  "referral",
+                  "out_of_office",
+                  "unsubscribe",
+                  "irrelevant"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "classified_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Classified At"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "evidence": {
+            "description": "Exact quotes from the reply that support the category.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "explanation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Explanation"
+          },
+          "needs_review": {
+            "title": "Needs Review",
+            "type": "boolean"
+          },
+          "review_reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "low_confidence",
+                  "fallback",
+                  "injection_suspected",
+                  "classification_failed",
+                  "unsubscribe_unconfirmed"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Reason"
+          },
+          "review_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why a person needs to look at it, in plain words.",
+            "title": "Review Text"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "enum": [
+                  "model",
+                  "demo_ai",
+                  "rules_fallback",
+                  "manual"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "status": {
+            "enum": [
+              "none",
+              "pending",
+              "classified",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "category",
+          "confidence",
+          "explanation",
+          "evidence",
+          "source",
+          "classified_at",
+          "needs_review",
+          "review_reason",
+          "review_text"
+        ],
+        "title": "ClassificationOut",
+        "type": "object"
+      },
+      "ClassifyQueued": {
+        "properties": {
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "queued": {
+            "title": "Queued",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "queued",
+          "message"
+        ],
+        "title": "ClassifyQueued",
         "type": "object"
       },
       "CompanyCreate": {
@@ -1309,6 +1542,330 @@
         "title": "ContextFact",
         "type": "object"
       },
+      "ConversationDetail": {
+        "properties": {
+          "account_email": {
+            "title": "Account Email",
+            "type": "string"
+          },
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "classification": {
+            "$ref": "#/components/schemas/ClassificationOut"
+          },
+          "company": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CompanyRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "counterpart": {
+            "$ref": "#/components/schemas/CounterpartOut"
+          },
+          "draft": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DraftOut"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The open reply draft for this thread, if there is one."
+          },
+          "has_draft": {
+            "title": "Has Draft",
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "is_demo": {
+            "title": "Is Demo",
+            "type": "boolean"
+          },
+          "last_direction": {
+            "anyOf": [
+              {
+                "enum": [
+                  "inbound",
+                  "outbound"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Direction"
+          },
+          "last_message_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Message At"
+          },
+          "last_preview": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Preview"
+          },
+          "lead": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LeadRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message_count": {
+            "title": "Message Count",
+            "type": "integer"
+          },
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/ThreadMessage"
+            },
+            "title": "Messages",
+            "type": "array"
+          },
+          "stop": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StopOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "subject": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject"
+          },
+          "unread": {
+            "title": "Unread",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "account_id",
+          "account_email",
+          "is_demo",
+          "subject",
+          "counterpart",
+          "last_message_at",
+          "last_direction",
+          "last_preview",
+          "message_count",
+          "unread",
+          "lead",
+          "company",
+          "classification",
+          "stop",
+          "has_draft",
+          "messages",
+          "draft"
+        ],
+        "title": "ConversationDetail",
+        "type": "object"
+      },
+      "ConversationSummary": {
+        "properties": {
+          "account_email": {
+            "title": "Account Email",
+            "type": "string"
+          },
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "classification": {
+            "$ref": "#/components/schemas/ClassificationOut"
+          },
+          "company": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CompanyRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "counterpart": {
+            "$ref": "#/components/schemas/CounterpartOut"
+          },
+          "has_draft": {
+            "title": "Has Draft",
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "is_demo": {
+            "title": "Is Demo",
+            "type": "boolean"
+          },
+          "last_direction": {
+            "anyOf": [
+              {
+                "enum": [
+                  "inbound",
+                  "outbound"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Direction"
+          },
+          "last_message_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Message At"
+          },
+          "last_preview": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Preview"
+          },
+          "lead": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LeadRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message_count": {
+            "title": "Message Count",
+            "type": "integer"
+          },
+          "stop": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StopOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "subject": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject"
+          },
+          "unread": {
+            "title": "Unread",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "account_id",
+          "account_email",
+          "is_demo",
+          "subject",
+          "counterpart",
+          "last_message_at",
+          "last_direction",
+          "last_preview",
+          "message_count",
+          "unread",
+          "lead",
+          "company",
+          "classification",
+          "stop",
+          "has_draft"
+        ],
+        "title": "ConversationSummary",
+        "type": "object"
+      },
+      "CounterpartOut": {
+        "properties": {
+          "address": {
+            "title": "Address",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The contact's name when the address matches one.",
+            "title": "Name"
+          }
+        },
+        "required": [
+          "address",
+          "name"
+        ],
+        "title": "CounterpartOut",
+        "type": "object"
+      },
       "CriterionResult": {
         "properties": {
           "evidence": {
@@ -1360,6 +1917,24 @@
           "evidence"
         ],
         "title": "CriterionResult",
+        "type": "object"
+      },
+      "DeleteMailOut": {
+        "properties": {
+          "conversations": {
+            "title": "Conversations",
+            "type": "integer"
+          },
+          "messages": {
+            "title": "Messages",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "conversations",
+          "messages"
+        ],
+        "title": "DeleteMailOut",
         "type": "object"
       },
       "DemoModeRequest": {
@@ -1486,6 +2061,37 @@
         "title": "DraftCreate",
         "type": "object"
       },
+      "DraftFactOut": {
+        "description": "An approved profile fact an AI draft was written from.",
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "still_approved": {
+            "description": "False when the fact was edited, disabled or deleted after the draft was written.",
+            "title": "Still Approved",
+            "type": "boolean"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "kind",
+          "still_approved"
+        ],
+        "title": "DraftFactOut",
+        "type": "object"
+      },
       "DraftOut": {
         "properties": {
           "approval_is_current": {
@@ -1545,6 +2151,13 @@
               }
             ],
             "title": "Email Account Id"
+          },
+          "facts": {
+            "items": {
+              "$ref": "#/components/schemas/DraftFactOut"
+            },
+            "title": "Facts",
+            "type": "array"
           },
           "facts_used": {
             "items": {
@@ -1646,6 +2259,7 @@
           "author",
           "version",
           "facts_used",
+          "facts",
           "approved_at",
           "approval_is_current",
           "sent_at",
@@ -2859,6 +3473,29 @@
           "note"
         ],
         "title": "ImportRowPreview",
+        "type": "object"
+      },
+      "InboxCounts": {
+        "properties": {
+          "needs_review": {
+            "title": "Needs Review",
+            "type": "integer"
+          },
+          "open": {
+            "title": "Open",
+            "type": "integer"
+          },
+          "unread": {
+            "title": "Unread",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "unread",
+          "needs_review",
+          "open"
+        ],
+        "title": "InboxCounts",
         "type": "object"
       },
       "IndustriesStep": {
@@ -4177,6 +4814,25 @@
         "title": "LeadPatch",
         "type": "object"
       },
+      "LeadRef": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title"
+        ],
+        "title": "LeadRef",
+        "type": "object"
+      },
       "LeadTagsPut": {
         "additionalProperties": false,
         "properties": {
@@ -5003,6 +5659,37 @@
           "offset"
         ],
         "title": "Page[ContactOut]",
+        "type": "object"
+      },
+      "Page_ConversationSummary_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ConversationSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "Page[ConversationSummary]",
         "type": "object"
       },
       "Page_DraftOut_": {
@@ -6386,6 +7073,30 @@
         "title": "ServicesStep",
         "type": "object"
       },
+      "SetClassification": {
+        "additionalProperties": false,
+        "properties": {
+          "category": {
+            "enum": [
+              "interested",
+              "question",
+              "objection",
+              "not_now",
+              "referral",
+              "out_of_office",
+              "unsubscribe",
+              "irrelevant"
+            ],
+            "title": "Category",
+            "type": "string"
+          }
+        },
+        "required": [
+          "category"
+        ],
+        "title": "SetClassification",
+        "type": "object"
+      },
       "SignInRequest": {
         "properties": {
           "email": {
@@ -6510,6 +7221,80 @@
         "title": "StepStatus",
         "type": "object"
       },
+      "StopOut": {
+        "description": "Contact has been stopped: nothing will be sent to this address.",
+        "properties": {
+          "address": {
+            "title": "Address",
+            "type": "string"
+          },
+          "reason": {
+            "enum": [
+              "unsubscribe",
+              "bounce",
+              "complaint",
+              "manual",
+              "replied_stop"
+            ],
+            "title": "Reason",
+            "type": "string"
+          },
+          "since": {
+            "format": "date-time",
+            "title": "Since",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason",
+          "address",
+          "since",
+          "text"
+        ],
+        "title": "StopOut",
+        "type": "object"
+      },
+      "SuggestReplyOut": {
+        "properties": {
+          "ai_label": {
+            "description": "How the text was produced, e.g. 'Demo AI: rule-based stand-in, not a real model'.",
+            "title": "Ai Label",
+            "type": "string"
+          },
+          "draft": {
+            "$ref": "#/components/schemas/DraftOut"
+          },
+          "is_demo_ai": {
+            "title": "Is Demo Ai",
+            "type": "boolean"
+          },
+          "regenerated": {
+            "description": "True when an earlier AI draft for this thread was replaced.",
+            "title": "Regenerated",
+            "type": "boolean"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "draft",
+          "regenerated",
+          "warnings",
+          "ai_label",
+          "is_demo_ai"
+        ],
+        "title": "SuggestReplyOut",
+        "type": "object"
+      },
       "SummarySection": {
         "properties": {
           "items": {
@@ -6626,6 +7411,12 @@
         "properties": {
           "account": {
             "$ref": "#/components/schemas/EmailAccountOut"
+          },
+          "classification_pending": {
+            "default": 0,
+            "description": "Replies waiting to be classified in the background (not waited for).",
+            "title": "Classification Pending",
+            "type": "integer"
           },
           "complete": {
             "title": "Complete",
@@ -7350,6 +8141,106 @@
           "account"
         ],
         "title": "TestOut",
+        "type": "object"
+      },
+      "ThreadMessage": {
+        "properties": {
+          "attachments": {
+            "items": {
+              "$ref": "#/components/schemas/AttachmentOut"
+            },
+            "title": "Attachments",
+            "type": "array"
+          },
+          "body": {
+            "$ref": "#/components/schemas/BodyOut"
+          },
+          "delivery_error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delivery Error Code"
+          },
+          "delivery_label": {
+            "title": "Delivery Label",
+            "type": "string"
+          },
+          "delivery_state": {
+            "enum": [
+              "demo",
+              "queued",
+              "sent",
+              "failed",
+              "unknown"
+            ],
+            "title": "Delivery State",
+            "type": "string"
+          },
+          "direction": {
+            "enum": [
+              "inbound",
+              "outbound"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "from_address": {
+            "title": "From Address",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "is_bounce": {
+            "title": "Is Bounce",
+            "type": "boolean"
+          },
+          "sent_at": {
+            "format": "date-time",
+            "title": "Sent At",
+            "type": "string"
+          },
+          "subject": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject"
+          },
+          "to_addresses": {
+            "items": {
+              "type": "string"
+            },
+            "title": "To Addresses",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "direction",
+          "from_address",
+          "to_addresses",
+          "subject",
+          "sent_at",
+          "attachments",
+          "delivery_state",
+          "delivery_label",
+          "delivery_error_code",
+          "is_bounce",
+          "body"
+        ],
+        "title": "ThreadMessage",
         "type": "object"
       },
       "TimezoneStep": {
@@ -10844,6 +11735,99 @@
         ]
       }
     },
+    "/api/v1/workspaces/{workspace_id}/email/accounts/{account_id}/mail": {
+      "delete": {
+        "operationId": "delete_synced_mail_api_v1_workspaces__workspace_id__email_accounts__account_id__mail_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspace_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspace Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteMailOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Delete every message synced from this mailbox (stored bodies included)",
+        "tags": [
+          "email"
+        ]
+      }
+    },
     "/api/v1/workspaces/{workspace_id}/email/accounts/{account_id}/sync": {
       "post": {
         "operationId": "sync_account_api_v1_workspaces__workspace_id__email_accounts__account_id__sync_post",
@@ -11871,6 +12855,923 @@
         "summary": "Download the error report (rows that failed validation or were skipped as duplicates)",
         "tags": [
           "imports"
+        ]
+      }
+    },
+    "/api/v1/workspaces/{workspace_id}/inbox/conversations": {
+      "get": {
+        "operationId": "list_conversations_api_v1_workspaces__workspace_id__inbox_conversations_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspace_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspace Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Subject, sender, preview, message text, contact name or lead title contains.",
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Subject, sender, preview, message text, contact name or lead title contains.",
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "unread",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Unread"
+            }
+          },
+          {
+            "in": "query",
+            "name": "classification",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "interested",
+                    "question",
+                    "objection",
+                    "not_now",
+                    "referral",
+                    "out_of_office",
+                    "unsubscribe",
+                    "irrelevant",
+                    "unclassified"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Classification"
+            }
+          },
+          {
+            "in": "query",
+            "name": "needs_review",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Needs Review"
+            }
+          },
+          {
+            "in": "query",
+            "name": "account_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Account Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "lead_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lead Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "default": "open",
+              "enum": [
+                "open",
+                "archived"
+              ],
+              "title": "Status",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Page size (1-100).",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "description": "Page size (1-100).",
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Rows to skip.",
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "description": "Rows to skip.",
+              "maximum": 100000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Comma-separated fields; prefix '-' for descending.",
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Comma-separated fields; prefix '-' for descending.",
+              "title": "Sort"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_ConversationSummary_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "List conversations",
+        "tags": [
+          "inbox"
+        ]
+      }
+    },
+    "/api/v1/workspaces/{workspace_id}/inbox/conversations/{conversation_id}": {
+      "get": {
+        "operationId": "get_conversation_api_v1_workspaces__workspace_id__inbox_conversations__conversation_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspace_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspace Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "A thread with its messages",
+        "tags": [
+          "inbox"
+        ]
+      }
+    },
+    "/api/v1/workspaces/{workspace_id}/inbox/conversations/{conversation_id}/classification": {
+      "put": {
+        "operationId": "set_classification_api_v1_workspaces__workspace_id__inbox_conversations__conversation_id__classification_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspace_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspace Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetClassification"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Set (or confirm) the category yourself",
+        "tags": [
+          "inbox"
+        ]
+      }
+    },
+    "/api/v1/workspaces/{workspace_id}/inbox/conversations/{conversation_id}/classify": {
+      "post": {
+        "operationId": "reclassify_api_v1_workspaces__workspace_id__inbox_conversations__conversation_id__classify_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspace_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspace Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClassifyQueued"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Classify the latest reply again (runs in the background)",
+        "tags": [
+          "inbox"
+        ]
+      }
+    },
+    "/api/v1/workspaces/{workspace_id}/inbox/conversations/{conversation_id}/read": {
+      "post": {
+        "operationId": "mark_read_api_v1_workspaces__workspace_id__inbox_conversations__conversation_id__read_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspace_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspace Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Mark a conversation read",
+        "tags": [
+          "inbox"
+        ]
+      }
+    },
+    "/api/v1/workspaces/{workspace_id}/inbox/conversations/{conversation_id}/suggest-reply": {
+      "post": {
+        "operationId": "suggest_reply_api_v1_workspaces__workspace_id__inbox_conversations__conversation_id__suggest_reply_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspace_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspace Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuggestReplyOut"
+                }
+              }
+            },
+            "description": "An earlier AI draft was replaced."
+          },
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuggestReplyOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Draft a reply with AI (never sent automatically)",
+        "tags": [
+          "inbox"
+        ]
+      }
+    },
+    "/api/v1/workspaces/{workspace_id}/inbox/conversations/{conversation_id}/unread": {
+      "post": {
+        "operationId": "mark_unread_api_v1_workspaces__workspace_id__inbox_conversations__conversation_id__unread_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workspace_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspace Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Mark a conversation unread",
+        "tags": [
+          "inbox"
+        ]
+      }
+    },
+    "/api/v1/workspaces/{workspace_id}/inbox/counts": {
+      "get": {
+        "operationId": "get_counts_api_v1_workspaces__workspace_id__inbox_counts_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspace_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspace Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InboxCounts"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Unread and needs-review counts",
+        "tags": [
+          "inbox"
         ]
       }
     },

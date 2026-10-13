@@ -42,6 +42,17 @@ REPLY_CATEGORIES = (
     "unsubscribe",
     "irrelevant",
 )
+# Why a conversation's classification needs a person (MVP Prompt 10). Low confidence and uncertain intent are never acted on.
+REVIEW_REASONS = (
+    "low_confidence",
+    "fallback",
+    "injection_suspected",
+    "classification_failed",
+    "unsubscribe_unconfirmed",
+)
+CLASSIFICATION_SOURCES = ("model", "demo_ai", "rules_fallback", "manual")
+EMAIL_JOB_KINDS = ("classify",)
+EMAIL_JOB_STATUSES = ("queued", "running", "succeeded", "failed", "skipped")
 DRAFT_STATUSES = ("draft", "pending_approval", "approved", "rejected", "sent", "discarded")
 DRAFT_AUTHORS = ("user", "ai")
 SUPPRESSION_REASONS = ("unsubscribe", "bounce", "complaint", "manual", "replied_stop")

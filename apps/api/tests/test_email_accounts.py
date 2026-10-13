@@ -133,7 +133,7 @@ def test_demo_sync_is_idempotent_flagged_as_sample_and_separate_from_real_data(
         first.json()["conversations_created"],
         first.json()["messages_created"],
         first.json()["complete"],
-    ) == (3, 6, True)
+    ) == (6, 11, True)
     again = client.post(ws_url(wid, f"/accounts/{acct['id']}/sync")).json()
     assert (
         again["conversations_created"],
@@ -141,13 +141,13 @@ def test_demo_sync_is_idempotent_flagged_as_sample_and_separate_from_real_data(
         again["messages_updated"],
     ) == (0, 0, 0)
     rows = db.scalars(select(Message).where(Message.workspace_id == uuid.UUID(wid))).all()
-    assert len(rows) == 6 and all(m.is_sample and m.delivery_state == "demo" for m in rows)
+    assert len(rows) == 11 and all(m.is_sample and m.delivery_state == "demo" for m in rows)
     assert all(
         c.is_sample
         for c in db.scalars(select(Conversation).where(Conversation.workspace_id == uuid.UUID(wid)))
     )
     assert (
-        account_row(db, acct["id"]).sync_cursor == "demo:6"
+        account_row(db, acct["id"]).sync_cursor == "demo:11"
         and account_row(db, acct["id"]).credential_id is None
     )
 

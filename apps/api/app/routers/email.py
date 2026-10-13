@@ -8,12 +8,13 @@ from __future__ import annotations
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Request, Response, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Request, Response, status
+from sqlalchemy import func, select
 
 from app.api.scoping import get_scoped_or_404, scoped_select
 from app.clock import utcnow
 from app.config import Settings
-from app.db.models_email import EmailAccount
+from app.db.models_email import EmailAccount, EmailJob
 from app.deps import (
     CredentialsDep,
     DbDep,
@@ -35,7 +36,9 @@ from app.schemas.email import (
     SyncOut,
     TestOut,
 )
+from app.schemas.inbox import DeleteMailOut
 from app.services import email_accounts as svc
+from app.services import email_jobs, inbox
 from app.services.email_out import account_out, provider_out
 
 router = APIRouter(prefix="/api/v1/workspaces/{workspace_id}/email", tags=["email"])
@@ -51,6 +54,20 @@ RegistryDep = Annotated[ConnectorRegistry, Depends(get_registry)]
 
 def redirect_uri(settings: Settings) -> str:
     return settings.effective_google_redirect_uri
+
+
+def _pending_jobs(db: DbDep, ctx: WorkspaceDep) -> int:
+    return int(
+        db.scalar(
+            select(func.count())
+            .select_from(EmailJob)
+            .where(
+                EmailJob.workspace_id == ctx.workspace_id,
+                EmailJob.status.in_(("queued", "running")),
+            )
+        )
+        or 0
+    )
 
 
 def _account(db: DbDep, ctx: WorkspaceDep, account_id: uuid.UUID) -> EmailAccount:
@@ -188,6 +205,7 @@ def sync_account(
     ctx: WorkspaceDep,
     db: DbDep,
     request: Request,
+    background: BackgroundTasks,
     settings: SettingsDep,
     store: CredentialsDep,
     registry: RegistryDep,
@@ -211,6 +229,9 @@ def sync_account(
         provider=account.provider, messages=summary.messages_created, conversations=summary.conversations_created,
     )  # fmt: skip
     db.commit()
+    pending = _pending_jobs(db, ctx)
+    if pending:  # classify new replies after the response is sent: syncing never waits on the AI
+        background.add_task(email_jobs.run_worker, request.app, workspace_id=ctx.workspace_id)
     return SyncOut(
         account=account_out(account),
         conversations_created=summary.conversations_created,
@@ -221,6 +242,7 @@ def sync_account(
         complete=summary.complete,
         rate_limited_until=summary.rate_limited_until,
         error_code=summary.error_code,
+        classification_pending=pending,
     )
 
 
@@ -274,6 +296,26 @@ def disconnect_account(
     )  # fmt: skip
     db.commit()
     return DisconnectOut(account=account_out(account), revoked=revoked)
+
+
+@router.delete(
+    "/accounts/{account_id}/mail",
+    response_model=DeleteMailOut,
+    responses=ERRORS,
+    summary="Delete every message synced from this mailbox (stored bodies included)",
+)
+def delete_synced_mail(
+    account_id: uuid.UUID, ctx: WorkspaceDep, db: DbDep, request: Request, settings: SettingsDep
+) -> DeleteMailOut:
+    require_owner(ctx)
+    account = _account(db, ctx, account_id)
+    conversations, messages = inbox.delete_synced_mail(db, ctx, account)
+    audit_event(
+        db, ctx, request, settings, "email.mail_deleted", "email_account", account.id,
+        provider=account.provider, conversations=conversations, messages=messages,
+    )  # fmt: skip
+    db.commit()
+    return DeleteMailOut(conversations=conversations, messages=messages)
 
 
 __all__ = ["WorkspaceContext", "router"]

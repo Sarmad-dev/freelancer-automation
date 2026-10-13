@@ -183,16 +183,23 @@ class AiService:
         if previous:
             parts["our_previous_message"] = previous
 
+        reply_text = f"{subject or ''}\n{body}"
+
         def finish(out: ClassifyReplyOutput, w: list[str]) -> ClassifyReplyOutput:
+            # Quotes must really be in the reply; a quote the model made up is dropped, never shown.
+            quotes = [q for q in out.evidence if validate.contained_in(q, reply_text)]
+            if len(quotes) != len(out.evidence):
+                w.append("evidence_dropped")
+            out = out.model_copy(update={"evidence": quotes})
             # An explicit request to stop is never allowed to be missed or argued away.
-            if out.category != "unsubscribe" and rules.looks_like_opt_out(
-                f"{subject or ''}\n{body}"
-            ):
+            if out.category != "unsubscribe" and rules.looks_like_opt_out(reply_text):
                 w.append("opt_out_detected_by_rules")
+                forced = rules.classify_by_rules(subject, body)
                 return ClassifyReplyOutput(
                     category="unsubscribe",
                     confidence=max(out.confidence, 0.8),
                     rationale="The reply asks to stop being contacted.",
+                    evidence=forced.evidence if forced.category == "unsubscribe" else [],
                 )
             if signals and out.confidence > 0.6:
                 w.append("confidence_capped")
@@ -328,8 +335,27 @@ class AiService:
             warnings.append("injection_suspected")
         first_name = (inp.recipient_first_name or "").strip() or None
         ids = {f["id"] for f in facts}
+        reply_parts: dict[str, str] = {}
+        reply_text = ""
+        if inp.reply_to is not None:
+            answered = _prep(inp.reply_to.message, 8_000, warnings, "message") or ""
+            earlier = _prep(inp.reply_to.previous_message, 4_000, warnings, "previous_message")
+            if untrusted.injection_signals(answered):
+                warnings.append("injection_suspected")
+            reply_parts["message_being_answered"] = answered
+            if earlier:
+                reply_parts["our_previous_message"] = earlier
+            reply_text = f"{inp.reply_to.subject or ''} {answered} {earlier or ''}"
+        # A reply may repeat what the other person wrote (a time they proposed, a figure they quoted), nothing else new.
         allowed = " ".join(
-            [_flatten(profile), _flatten(facts), _flatten(lead), inp.goal, first_name or ""]
+            [
+                _flatten(profile),
+                _flatten(facts),
+                _flatten(lead),
+                inp.goal,
+                first_name or "",
+                reply_text,
+            ]
         )
 
         def finish(out: DraftOutreachOutput, w: list[str]) -> DraftOutreachOutput:
@@ -352,16 +378,32 @@ class AiService:
             _Spec(
                 template=TEMPLATES["draft_outreach"],
                 payload={
-                    "input": {"lead": lead, "recipient_first_name": first_name, "goal": inp.goal},
+                    "input": {
+                        "lead": lead,
+                        "recipient_first_name": first_name,
+                        "goal": inp.goal,
+                        "reply_to": (
+                            {
+                                "classification": inp.reply_to.classification,
+                                "message": reply_parts.get("message_being_answered", ""),
+                            }
+                            if inp.reply_to is not None
+                            else None
+                        ),
+                    },
                     "context": {"profile": profile, "facts": facts},
                 },
                 context={
+                    "mode": "reply" if inp.reply_to is not None else "first_outreach",
                     "freelancer": profile,
                     "approved_facts": facts,
                     "recipient_first_name": first_name,
                     "goal": inp.goal,
+                    "their_message_classified_as": inp.reply_to.classification
+                    if inp.reply_to
+                    else None,
                 },
-                untrusted_parts={"lead": json.dumps(lead, sort_keys=True)},
+                untrusted_parts={"lead": json.dumps(lead, sort_keys=True), **reply_parts},
                 finish=finish,
                 warnings=warnings,
                 context_hash=context.context_hash,

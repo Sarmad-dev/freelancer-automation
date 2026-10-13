@@ -48,6 +48,7 @@ from app.mailbox.gmail import REQUIRED_SCOPES
 from app.mailbox.registry import ConnectorRegistry
 from app.mailbox.types import AccountProfile, RemoteMessage, SyncPage, TokenSet
 from app.security.credentials import CredentialError, CredentialStore
+from app.services import inbox_events
 from app.services import leads as lead_service
 
 logger = logging.getLogger("freelancer_os.email")
@@ -460,7 +461,7 @@ def sync_account(
         except PermanentError:
             _fail(db, account, "provider_rejected", now, reconnect=False)
             raise _problem_response(502, "provider_rejected") from None
-        _store_page(db, ctx, account, page, summary)
+        _store_page(db, ctx, account, page, summary, now)
         account.sync_cursor = page.cursor
         mark_healthy(account, now)
         summary.pages += 1
@@ -551,12 +552,13 @@ def _store_page(
     account: EmailAccount,
     page: SyncPage,
     summary: SyncSummary,
+    now: datetime,
 ) -> None:
     """Upsert one page atomically. A concurrent run that stored the same ids first is tolerated (retry once)."""
     for attempt in range(2):
         try:
             with db.begin_nested():
-                counts = _upsert_messages(db, ctx, account, page)
+                counts = _upsert_messages(db, ctx, account, page, now)
         except IntegrityError:
             if attempt:
                 raise
@@ -569,7 +571,7 @@ def _store_page(
 
 
 def _upsert_messages(
-    db: Session, ctx: WorkspaceContext, account: EmailAccount, page: SyncPage
+    db: Session, ctx: WorkspaceContext, account: EmailAccount, page: SyncPage, now: datetime
 ) -> tuple[int, int, int]:
     wid = ctx.workspace_id
     ids = [m.provider_message_id for m in page.messages]
@@ -622,6 +624,8 @@ def _upsert_messages(
                 if getattr(message, attr) != value:
                     setattr(message, attr, value)
                     changed = True
+            if inbox_events.store_body(db, wid, message, rm):
+                changed = True
             updated_msg += int(changed)
             continue
         message = Message(
@@ -641,6 +645,8 @@ def _upsert_messages(
             is_sample=account.is_demo,
         )
         db.add(message)
+        db.flush()
+        inbox_events.store_body(db, wid, message, rm)
         created_msg += 1
         last = _aware(conv.last_message_at) if conv.last_message_at else None
         if last is None or _aware(rm.sent_at) > last:
@@ -669,6 +675,7 @@ def _upsert_messages(
                     bump=newer,
                     when=when,
                 )
+        inbox_events.on_new_message(db, wid, account, conv, message, rm, now)
     db.flush()
     return created_conv, created_msg, updated_msg
 

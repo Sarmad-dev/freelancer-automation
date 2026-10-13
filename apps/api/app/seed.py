@@ -44,6 +44,7 @@ from app.db.models_email import (
     EmailAccount,
     IntegrationConnection,
     Message,
+    MessageBody,
     SuppressionEntry,
 )
 from app.db.models_workflow import (
@@ -57,6 +58,8 @@ from app.db.models_workflow import (
     WorkflowStepRun,
     WorkflowVersion,
 )
+from app.mailbox.demo import fixture, fixture_snippet
+from app.mailbox.sanitize import SANITIZER_VERSION, prepare_body
 from app.security.passwords import hash_password
 from app.services.drafts import content_hash
 from app.services.fit_scoring import DEFAULT_CRITERIA, ProfileFacts, Scorer
@@ -554,6 +557,9 @@ def seed_demo(db: DbSession) -> tuple[bool, uuid.UUID | None]:
         classification="interested",
         classification_confidence=0.86,
         classification_explanation="Demo classification (mock, not a real model).",
+        classification_evidence=["can we talk next week"],
+        classification_source="demo_ai",
+        classified_at=now - timedelta(hours=4),
         is_sample=True,
     )
     db.add(conv)
@@ -569,7 +575,7 @@ def seed_demo(db: DbSession) -> tuple[bool, uuid.UUID | None]:
             from_address=acct.email_address,
             to_addresses=[contacts["northwind"].email or ""],
             subject="Website rebuild",
-            snippet="Hi Jordan, fictional outreach message.",
+            snippet=fixture_snippet("demo-msg-1"),
             sent_at=now - timedelta(days=2),
             is_sample=True,
         )
@@ -585,11 +591,34 @@ def seed_demo(db: DbSession) -> tuple[bool, uuid.UUID | None]:
             from_address=contacts["northwind"].email or "",
             to_addresses=[acct.email_address],
             subject="Re: Website rebuild",
-            snippet="Sounds interesting, can we talk next week? (fictional)",
+            snippet=fixture_snippet("demo-msg-2"),
             sent_at=now - timedelta(hours=5),
             is_sample=True,
         )
     )
+    db.flush()
+    for mid in ("demo-msg-1", "demo-msg-2"):
+        stored = db.scalar(
+            select(Message).where(
+                Message.email_account_id == acct.id, Message.provider_message_id == mid
+            )
+        )
+        assert stored is not None
+        demo_msg = fixture(mid)
+        prepared = prepare_body(demo_msg.text, demo_msg.html)
+        db.add(
+            MessageBody(
+                workspace_id=wid,
+                message_id=stored.id,
+                body_text=prepared.text,
+                body_html=prepared.html,
+                text_truncated=prepared.text_truncated,
+                images_blocked=prepared.images_blocked,
+                sanitizer_version=SANITIZER_VERSION if prepared.html else None,
+            )
+        )
+        if mid == "demo-msg-2":
+            conv.classified_message_id = stored.id
     draft = Draft(
         workspace_id=wid,
         lead_id=leads["northwind"].id,

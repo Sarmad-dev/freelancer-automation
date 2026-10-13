@@ -634,7 +634,7 @@ def test_every_call_is_metered_without_content(client: TestClient, db: DbSession
     )
     assert ok_row.estimated_cost_micros == (10 * 2000 + 5 * 4000) // 1000
     assert (
-        ok_row.prompt_version == "2026-10-v1"
+        ok_row.prompt_version == "2026-10-v2"
         and ok_row.latency_ms is not None
         and not ok_row.is_mock
     )

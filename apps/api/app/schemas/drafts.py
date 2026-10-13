@@ -45,6 +45,17 @@ class MessageStateOut(BaseModel):
     sent_at: datetime
 
 
+class DraftFactOut(BaseModel):
+    """An approved profile fact an AI draft was written from."""
+
+    id: uuid.UUID
+    title: str
+    kind: str
+    still_approved: bool = Field(
+        description="False when the fact was edited, disabled or deleted after the draft was written."
+    )
+
+
 class DraftOut(BaseModel):
     id: uuid.UUID
     lead_id: uuid.UUID | None
@@ -57,6 +68,7 @@ class DraftOut(BaseModel):
     author: Literal["user", "ai"]
     version: int
     facts_used: list[str]
+    facts: list[DraftFactOut]
     approved_at: datetime | None
     approval_is_current: bool = Field(
         description="True only while the approved text is exactly the text that would be sent."

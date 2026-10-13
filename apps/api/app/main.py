@@ -28,6 +28,7 @@ from app.routers import (
     fit_scoring,
     health,
     imports,
+    inbox,
     knowledge,
     leads,
     notifications,
@@ -170,6 +171,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(ai.router)
     app.include_router(email.router)
     app.include_router(email_oauth.router)
+    app.include_router(inbox.router)
     app.include_router(drafts.router)
     app.include_router(suppressions.router)
     return app

@@ -27,7 +27,7 @@ from app import audit
 from app.api.scoping import get_scoped_or_404, scoped_select
 from app.config import Settings
 from app.db.models_crm import Lead
-from app.db.models_email import Conversation, Draft, EmailAccount, Message
+from app.db.models_email import Conversation, Draft, EmailAccount, Message, MessageBody
 from app.deps import WorkspaceContext
 from app.errors import AppError
 from app.mailbox.connector import EmailConnector
@@ -43,6 +43,7 @@ from app.mailbox.errors import (
 )
 from app.mailbox.mime import normalize_address
 from app.mailbox.registry import ConnectorRegistry
+from app.mailbox.sanitize import prepare_body
 from app.mailbox.types import OutgoingMessage, SendResult
 from app.ratelimit import RateLimiter
 from app.schemas.drafts import DraftCreate, DraftPatch
@@ -427,6 +428,16 @@ def send_draft(
             is_sample=account.is_demo,
         )
         db.add(message)
+        db.flush()
+        prepared = prepare_body(draft.body_text, None)
+        db.add(
+            MessageBody(
+                workspace_id=ctx.workspace_id,
+                message_id=message.id,
+                body_text=prepared.text,
+                text_truncated=prepared.text_truncated,
+            )
+        )
     else:  # a previous attempt definitely failed: reuse its row
         message.delivery_state = "queued"
         message.delivery_error_code = None

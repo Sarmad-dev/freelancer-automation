@@ -71,6 +71,10 @@ class SyncOut(BaseModel):
     complete: bool
     rate_limited_until: datetime | None
     error_code: str | None
+    classification_pending: int = Field(
+        default=0,
+        description="Replies waiting to be classified in the background (not waited for).",
+    )
 
 
 class TestOut(BaseModel):

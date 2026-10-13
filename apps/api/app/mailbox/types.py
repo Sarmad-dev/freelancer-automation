@@ -49,6 +49,9 @@ class RemoteMessage:
     sent_at: datetime
     attachments: tuple[AttachmentInfo, ...] = ()
     unread: bool = False
+    # Raw bodies as the provider sent them (None = not provided). They are cleaned by ``sanitize.prepare_body`` before storage.
+    body_text: str | None = None
+    body_html: str | None = None
 
 
 @dataclass(frozen=True)

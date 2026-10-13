@@ -196,13 +196,13 @@ def test_the_demo_connector_is_local_deterministic_and_cannot_do_oauth() -> None
     demo = DemoConnector()
     now = datetime(2026, 10, 12, 12, 0, tzinfo=UTC)
     one, two = demo.sync("", cursor=None, now=now), demo.sync("", cursor=None, now=now)
-    assert one == two and one.done and one.cursor == "demo:6" and len(one.messages) == 6
+    assert one == two and one.done and one.cursor == "demo:11" and len(one.messages) == 11
     assert all(m.provider_message_id.startswith("demo-") for m in one.messages)
     assert all(
         m.from_address.endswith(".example") or m.to_addresses[0].endswith(".example")
         for m in one.messages
     )
-    assert demo.sync("", cursor="demo:6", now=now).messages == ()
+    assert demo.sync("", cursor="demo:11", now=now).messages == ()
     partial = demo.sync("", cursor=None, now=now, page_size=4)
     assert (
         not partial.done

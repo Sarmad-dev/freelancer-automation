@@ -96,6 +96,6 @@ describe("inbox labels", () => {
     expect(counterpartLabel({ counterpart: { name: null, address: "s@x.example" } })).toBe(
       "s@x.example",
     );
-    expect(counterpartLabel({ counterpart: { name: null, address: null } })).toBe("Unknown sender");
+    expect(counterpartLabel({ counterpart: { name: null, address: "" } })).toBe("Unknown sender");
   });
 });

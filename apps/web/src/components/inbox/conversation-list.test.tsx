@@ -92,7 +92,7 @@ describe("ConversationList", () => {
   it("shows classifying while pending and an unknown-sender fallback", () => {
     renderList([
       item({
-        counterpart: { address: null, name: null },
+        counterpart: { address: "", name: null },
         subject: null,
         classification: { ...item().classification, status: "pending", category: null },
       }),

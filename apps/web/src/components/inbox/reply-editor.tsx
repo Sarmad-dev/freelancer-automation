@@ -77,6 +77,7 @@ export function ReplyEditor({
   const factsId = `${ids}-facts`;
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   const busyRef = useRef(false);
+  const returnFocusTo = useRef<HTMLElement | null>(null);
 
   const [draft, setDraft] = useState<DraftOut | null>(() => openDraft(thread.draft));
   const [seen, setSeen] = useState(thread.draft);
@@ -112,6 +113,19 @@ export function ReplyEditor({
       setFocusBody(false);
     }
   }, [focusBody]);
+
+  // The shared dialog hands focus back to whatever had it when it opened, but its own autofocused Cancel
+  // button has already taken it by then. So the editor puts focus back on the Send button itself.
+  useEffect(() => {
+    if (sendOpen) return;
+    const el = returnFocusTo.current;
+    returnFocusTo.current = null;
+    if (!el) return;
+    const t = setTimeout(() => {
+      if (el.isConnected) el.focus();
+    }, 0);
+    return () => clearTimeout(t);
+  }, [sendOpen]);
 
   const path = { workspace_id: workspaceId };
 
@@ -324,6 +338,8 @@ export function ReplyEditor({
 
   function openSend() {
     // One key per time the dialog opens: every retry inside it repeats the same request.
+    returnFocusTo.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setSendKey(newIdempotencyKey());
     setSendIssue(null);
     setSendOpen(true);

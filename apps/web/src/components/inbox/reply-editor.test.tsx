@@ -961,7 +961,7 @@ describe("the send dialog", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(refresh).toHaveBeenCalledTimes(1);
     expect(status()).toHaveTextContent("The message was sent.");
-    expect(screen.getByText("Sent")).toBeInTheDocument();
+    expect(screen.getByText("Sent", { selector: "span" })).toBeInTheDocument();
     expect(screen.queryByRole("button")).toBeNull();
   });
 

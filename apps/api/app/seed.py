@@ -42,6 +42,7 @@ from app.db.models_email import (
     Conversation,
     Draft,
     EmailAccount,
+    EmailJob,
     IntegrationConnection,
     Message,
     MessageBody,
@@ -619,6 +620,17 @@ def seed_demo(db: DbSession) -> tuple[bool, uuid.UUID | None]:
         )
         if mid == "demo-msg-2":
             conv.classified_message_id = stored.id
+            db.add(
+                EmailJob(
+                    workspace_id=wid,
+                    conversation_id=conv.id,
+                    message_id=stored.id,
+                    kind="classify",
+                    status="succeeded",
+                    attempts=1,
+                    completed_at=now,
+                )
+            )
     draft = Draft(
         workspace_id=wid,
         lead_id=leads["northwind"].id,

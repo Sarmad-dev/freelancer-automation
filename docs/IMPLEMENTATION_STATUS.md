@@ -1,6 +1,28 @@
 # Implementation status
 
-_Last updated: MVP Prompt 9 (email integration framework and demo mode)._
+_Last updated: MVP Prompt 10 (inbox, reply classification and draft review)._
+
+## Completed — MVP Prompt 10: inbox, reply classification and draft review
+- **Inbox UI** (`/inbox`, [INBOX.md](INBOX.md)): conversation list (search, unread, needs-review, category filters, mailbox filter, paging, counts), thread view in source-timestamp order with attachment metadata, classification card (category, confidence, plain-language explanation, quoted evidence, who/what produced it, manual override, classify again), stop banner for unsubscribe/bounce/no-further-contact with an owner-only "remove from do-not-contact list", and a reply editor (suggest, regenerate, edit, save, approve, discard, send dialog with a stable idempotency key, unknown-outcome resolution, "written using" approved facts). Members see everything read-only.
+- **Safe rendering:** bodies are stored cleaned (nh3 allow-list; images and remote content removed and flagged; text normalised and capped). Plain text is the default; formatted HTML is shown only inside a sandboxed iframe with a restrictive CSP. Owners can delete synced mail.
+- **Pipeline:** idempotent sync stores bodies, links contacts and enqueues one classification job per message; DB-backed job queue (atomic claim, 5-minute lease, backoff, failure → needs review, superseded messages skipped); bounce detection suppresses the failed recipient; deterministic opt-out confirmation is required before anything is suppressed automatically; reply notifications; `follow_ups.check()` gate for future automation. Run workers with `python -m app.cli process-jobs [--loop]` (also run after a sync).
+- **Classification:** eight categories, confidence, explanation and evidence that must really appear in the message; low confidence (< 0.7), fallback, injection suspicion, unconfirmed unsubscribe or a failed job go to review with a reason.
+- **Suggested replies:** `draft_outreach` with the incoming message as fenced untrusted data and approved facts only; creates an ordinary AI draft; never sends; refused for stopped contacts or insufficient approved facts.
+- **API:** `GET /inbox/counts`, `GET /inbox/conversations[/{id}]`, read/unread, `POST …/classify`, `PUT …/classification`, `POST …/suggest-reply`, `DELETE /email/accounts/{id}/mail`. Migration **0008**. Contracts regenerated.
+
+## Verification: MVP Prompt 10
+- API: 1,392 pytest tests pass on **SQLite and PostgreSQL 16** (Python 3.13); Python 3.12 run: see the line below; ruff and mypy (strict) clean; migrations 0001→0008 apply on PostgreSQL. New suites: sanitiser (48), pipeline/jobs/bounce/follow-up/bodies/ordering (33), inbox API incl. isolation, members, suggest-reply, delete mail, CLI, migration and seed (~28), plus additions to AI-service and Gmail tests.
+- Web: 944 vitest tests pass (inbox model, list, view, thread, message card, safe-HTML frame, classification card, stop banner and reply editor with axe); lint, typecheck, format, production build and `pnpm contracts:check` pass.
+- Mutation checks (each made tests fail): unsubscribe auto-suppression without rule confirmation, review threshold off, unconfirmed-unsubscribe review off, superseded-job skip off, bounce handling off, sanitiser relative links allowed. One survivor, `dedupe_key` on reply notifications: equivalent in practice because a message is only notified once by the idempotent sync; the unique key is a second line of defence.
+- Real browser (Chromium, built app, PostgreSQL): demo mailbox synced from Integrations produced six conversations classified as expected (interested, objection, out of office, unsubscribe → stopped, bounce → stopped, an injection-laden question → needs review); thread view, stop banner, "replies turned off" state, suggest reply with facts used, approve and demo send all worked with no console errors; no sideways scroll at 1440/820/390 in dark and light; axe reports one `label-content-name-mismatch` on the workspace switcher button in the app shell, which also appears on `/leads` (it is not from this prompt).
+- Bugs found by tests and fixed: migration downgrade constraint naming; the seed lacked an `email_jobs` row (the every-tenant-table test caught it); a loophole letting numbers from a suspected-injection email into a reply; sanitiser let relative links through; the shell navigation tests assumed Inbox was "Soon".
+
+## Not verified / known gaps (Prompt 10)
+- **Gmail bodies and sync are still unverified against Google** (simulated responses only). The demo AI is a rule-based stand-in: classification quality and reply quality with a real model are **not measured**.
+- Jobs run after sync or by a separate worker process; there is no scheduler or automatic periodic sync yet (Prompt 11). No sequence engine exists, so "replies stop follow-ups" is enforced by `follow_ups.check()` and tested, but nothing automated calls it yet.
+- Attachments are listed (name, type, size) but cannot be opened. No domain-level suppression, snooze, assignment, labels, or archive UI (the API filters archived).
+- The classification evidence quote can include the subject line text joined to the body (cosmetic).
+- Shared `Modal` focus restoration (packages/ui) does not return focus when the dialog's own button is autofocused; the reply editor works around it for the send dialog.
 
 ## Completed — MVP Prompt 9: email integration framework and demo mode
 - **Connector framework** (`apps/api/app/mailbox/`, [EMAIL.md](EMAIL.md)): an `EmailConnector` interface (authorize, callback/exchange, refresh, revoke, profile/health check, sync, fetch body, create draft, send), a capability/scope manifest per connector, a registry, normalised types, and defensive MIME helpers. Decisions D49–D54.

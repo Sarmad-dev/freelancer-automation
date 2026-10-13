@@ -49,6 +49,8 @@ class Workflow(TenantMixin, Timestamps, Base):
     status: Mapped[str] = mapped_column(String(10), nullable=False, default="draft")
     mode: Mapped[str] = mapped_column(String(10), nullable=False, default="test")
     active_version: Mapped[int | None] = mapped_column(Integer)
+    # The trigger event of the active version (null until activated): lets an event find the workflows that listen to it.
+    trigger_event: Mapped[str | None] = mapped_column(String(30))
     created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("users.id", ondelete="SET NULL")
     )
@@ -71,6 +73,10 @@ class WorkflowVersion(TenantMixin, Base):
     # Integrity check over the canonical node/edge content of this version.
     checksum: Mapped[str] = mapped_column(String(64), nullable=False)
     note: Mapped[str | None] = mapped_column(String(300))
+    # Result of validating this snapshot when it was saved. Only a valid version can be activated or run.
+    valid: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    issues: Mapped[list[dict[str, Any]]] = mapped_column(JSON, nullable=False, default=list)
+    trigger_event: Mapped[str | None] = mapped_column(String(30))
     created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("users.id", ondelete="SET NULL")
     )
@@ -135,6 +141,10 @@ class WorkflowRun(TenantMixin, Timestamps, Base):
         ),
         check_in("status", domain.RUN_STATUSES),
         check_in("mode", domain.WORKFLOW_MODES),
+        CheckConstraint(
+            "subject_type IS NULL OR subject_type IN ('lead', 'conversation')",
+            name="subject_type_valid",
+        ),
         tenant_fk("workflow_runs", "workflow_id", "workflows", ondelete="CASCADE"),
         tenant_fk("workflow_runs", "version_id", "workflow_versions"),
         # The pinned version must belong to the run's workflow.
@@ -151,6 +161,8 @@ class WorkflowRun(TenantMixin, Timestamps, Base):
             "started_at",
         ),
         Index("ix_workflow_runs_correlation", "correlation_id"),
+        Index("ix_workflow_runs_status_wake", "status", "wake_at"),
+        Index("ix_workflow_runs_subject", "workspace_id", "workflow_id", "subject_id"),
     )
 
     id: Mapped[uuid.UUID] = pk_column()
@@ -168,6 +180,22 @@ class WorkflowRun(TenantMixin, Timestamps, Base):
     wake_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     error_category: Mapped[str | None] = mapped_column(String(40))
     error_summary: Mapped[str | None] = mapped_column(String(500))
+    # What the run is about (a lead or a conversation) and where it is in the graph.
+    subject_type: Mapped[str | None] = mapped_column(String(20))
+    subject_id: Mapped[uuid.UUID | None] = mapped_column(Uuid)
+    current_node_key: Mapped[str | None] = mapped_column(String(80))
+    # Ids and short enumerations produced by steps (never message text or addresses).
+    context: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
+    steps_taken: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    # Automatic retries of the current node count from here (a manual retry moves it forward).
+    attempt_floor: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    # A worker owns the run until locked_until; a crashed worker's run becomes claimable again afterwards.
+    locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    lock_token: Mapped[str | None] = mapped_column(String(32))
+    cancel_requested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    started_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="SET NULL")
+    )
 
 
 class WorkflowStepRun(TenantMixin, Timestamps, Base):
@@ -198,12 +226,16 @@ class WorkflowStepRun(TenantMixin, Timestamps, Base):
     output_summary: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     error_category: Mapped[str | None] = mapped_column(String(40))
     error_summary: Mapped[str | None] = mapped_column(String(500))
+    # The output port the step left through ("next", "true", "approved", ...).
+    port: Mapped[str | None] = mapped_column(String(60))
 
 
 class ApprovalRequest(TenantMixin, Timestamps, Base):
     __tablename__ = "approval_requests"
     __table_args__ = (
         UniqueConstraint("workspace_id", "id", name="uq_approval_requests_workspace_id_id"),
+        # One approval per step attempt: creating it twice (a retry after a crash) cannot ask a person twice.
+        UniqueConstraint("workspace_id", "step_run_id", name="uq_approval_requests_step"),
         check_in("status", domain.APPROVAL_STATUSES),
         tenant_fk("approval_requests", "run_id", "workflow_runs", ondelete="CASCADE"),
         tenant_fk("approval_requests", "step_run_id", "workflow_step_runs", ondelete="CASCADE"),

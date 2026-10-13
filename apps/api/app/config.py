@@ -107,6 +107,14 @@ class Settings(BaseSettings):
     email_send_limit_per_day: int = Field(
         default=100, ge=1, le=100_000, alias="EMAIL_SEND_LIMIT_PER_DAY"
     )
+    # Workflow engine limits, per workspace (MVP Prompt 11).
+    workflow_max_workflows: int = Field(default=25, ge=1, le=1_000, alias="WORKFLOW_MAX_WORKFLOWS")
+    workflow_max_active_runs: int = Field(
+        default=50, ge=1, le=10_000, alias="WORKFLOW_MAX_ACTIVE_RUNS"
+    )
+    workflow_max_runs_per_day: int = Field(
+        default=500, ge=1, le=1_000_000, alias="WORKFLOW_MAX_RUNS_PER_DAY"
+    )
 
     @field_validator("database_url")
     @classmethod

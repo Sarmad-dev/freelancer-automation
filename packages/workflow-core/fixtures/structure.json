@@ -139,9 +139,7 @@
         "nodes": [],
         "edges": []
       },
-      "codes": [
-        "missing_trigger"
-      ]
+      "codes": ["missing_trigger"]
     },
     {
       "name": "no trigger",
@@ -156,9 +154,7 @@
         ],
         "edges": []
       },
-      "codes": [
-        "missing_trigger"
-      ]
+      "codes": ["missing_trigger"]
     },
     {
       "name": "no end",
@@ -176,10 +172,7 @@
         ],
         "edges": []
       },
-      "codes": [
-        "missing_end",
-        "unhandled_branch"
-      ]
+      "codes": ["missing_end", "unhandled_branch"]
     },
     {
       "name": "two triggers",
@@ -222,10 +215,7 @@
           }
         ]
       },
-      "codes": [
-        "multiple_triggers",
-        "unreachable_node"
-      ]
+      "codes": ["multiple_triggers", "unreachable_node"]
     },
     {
       "name": "something leads back into the trigger",
@@ -275,10 +265,7 @@
           }
         ]
       },
-      "codes": [
-        "cycle",
-        "trigger_has_incoming"
-      ]
+      "codes": ["cycle", "trigger_has_incoming"]
     },
     {
       "name": "duplicate node ids",
@@ -316,9 +303,7 @@
           }
         ]
       },
-      "codes": [
-        "duplicate_node_id"
-      ]
+      "codes": ["duplicate_node_id"]
     },
     {
       "name": "duplicate edge ids",
@@ -354,9 +339,7 @@
           }
         ]
       },
-      "codes": [
-        "duplicate_edge_id"
-      ]
+      "codes": ["duplicate_edge_id"]
     },
     {
       "name": "a connection to a node that does not exist",
@@ -392,11 +375,7 @@
           }
         ]
       },
-      "codes": [
-        "dangling_edge",
-        "unhandled_branch",
-        "unreachable_node"
-      ]
+      "codes": ["dangling_edge", "unhandled_branch", "unreachable_node"]
     },
     {
       "name": "an unknown node type",
@@ -437,9 +416,7 @@
           }
         ]
       },
-      "codes": [
-        "unknown_node_type"
-      ]
+      "codes": ["unknown_node_type"]
     },
     {
       "name": "an output that does not exist",
@@ -482,11 +459,7 @@
           }
         ]
       },
-      "codes": [
-        "unhandled_branch",
-        "unknown_port",
-        "unreachable_node"
-      ]
+      "codes": ["unhandled_branch", "unknown_port", "unreachable_node"]
     },
     {
       "name": "connections out of an end node",
@@ -529,11 +502,7 @@
           }
         ]
       },
-      "codes": [
-        "unhandled_branch",
-        "unknown_port",
-        "unreachable_node"
-      ]
+      "codes": ["unhandled_branch", "unknown_port", "unreachable_node"]
     },
     {
       "name": "two connections from one output",
@@ -595,10 +564,7 @@
           }
         ]
       },
-      "codes": [
-        "ambiguous_branch",
-        "unreachable_node"
-      ]
+      "codes": ["ambiguous_branch", "unreachable_node"]
     },
     {
       "name": "a condition with no false branch",
@@ -642,9 +608,7 @@
           }
         ]
       },
-      "codes": [
-        "unhandled_branch"
-      ]
+      "codes": ["unhandled_branch"]
     },
     {
       "name": "a step that leads nowhere",
@@ -681,10 +645,7 @@
           }
         ]
       },
-      "codes": [
-        "unhandled_branch",
-        "unreachable_node"
-      ]
+      "codes": ["unhandled_branch", "unreachable_node"]
     },
     {
       "name": "a node nothing leads to",
@@ -740,9 +701,7 @@
           }
         ]
       },
-      "codes": [
-        "unreachable_node"
-      ]
+      "codes": ["unreachable_node"]
     },
     {
       "name": "a loop",
@@ -798,10 +757,7 @@
           }
         ]
       },
-      "codes": [
-        "cycle",
-        "unreachable_node"
-      ]
+      "codes": ["cycle", "unreachable_node"]
     },
     {
       "name": "a step that connects to itself",
@@ -844,10 +800,7 @@
           }
         ]
       },
-      "codes": [
-        "cycle",
-        "unreachable_node"
-      ]
+      "codes": ["cycle", "unreachable_node"]
     }
   ]
 }

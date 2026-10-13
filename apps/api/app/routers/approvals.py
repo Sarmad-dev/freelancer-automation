@@ -36,13 +36,13 @@ def list_approvals(
     db: DbDep,
     params: Annotated[PageParams, Depends(page_params)],
     approval_status: Annotated[
-        Literal["pending", "approved", "rejected", "expired", "cancelled", "invalidated"] | None,
+        Literal["pending", "approved", "rejected", "expired", "cancelled", "invalidated", "all"],
         Query(alias="status"),
     ] = "pending",
     run_id: Annotated[uuid.UUID | None, Query()] = None,
 ) -> Page[ApprovalOut]:
     stmt = scoped_select(ApprovalRequest, ctx)
-    if approval_status is not None:
+    if approval_status != "all":
         stmt = stmt.where(ApprovalRequest.status == approval_status)
     if run_id is not None:
         stmt = stmt.where(ApprovalRequest.run_id == run_id)

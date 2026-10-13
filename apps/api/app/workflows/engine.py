@@ -904,6 +904,23 @@ def request_cancel(db: Session, run: WorkflowRun, now: datetime) -> str:
     return "cancelled"
 
 
+def _send_unresolved(db: Session, run: WorkflowRun) -> bool:
+    """True while the draft this run was sending still has an unconfirmed send nobody has resolved."""
+    from app.db.models_email import Draft
+    from app.services import drafts as draft_service
+
+    draft_id = run.context.get("draft_id") if run.context else None
+    try:
+        parsed = uuid.UUID(str(draft_id)) if draft_id else None
+    except ValueError:
+        parsed = None
+    draft = db_get_scoped(db, Draft, run.workspace_id, parsed)
+    if draft is None:
+        return False
+    message = draft_service.get_message(db, run.workspace_id, draft.id)
+    return message is not None and message.delivery_state in ("unknown", "queued")
+
+
 def retry_failed(db: Session, run: WorkflowRun, now: datetime) -> WorkflowStepRun:
     """Manual retry of the failed step. A send whose outcome is unknown is never retried blindly."""
     if run.status != "failed":
@@ -920,7 +937,7 @@ def retry_failed(db: Session, run: WorkflowRun, now: datetime) -> WorkflowStepRu
     )
     if step is None or step.status != "failed" or step.error_category is None:
         raise AppError(409, "not_retryable", "This run did not fail on a step that can be retried.")
-    if step.error_category == "outcome_unknown":
+    if step.error_category == "outcome_unknown" and _send_unresolved(db, run):
         raise AppError(
             409,
             "resolve_send_first",

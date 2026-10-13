@@ -53,8 +53,7 @@ provider could not confirm revocation (then remove access in the provider's acco
 
 ## Sync
 
-Messages are stored as metadata plus a 500-character snippet (bodies are fetched on demand and not stored; the retention decision belongs to
-the inbox, Prompt 10). Provider ids are unique per account, so repeating a page changes nothing; the cursor only moves after a page is
+Messages are stored as metadata plus a 500-character snippet, and (since Prompt 10) a cleaned body in `message_bodies` (see [INBOX.md](INBOX.md) for what is kept and how to delete it). Provider ids are unique per account, so repeating a page changes nothing; the cursor only moves after a page is
 stored; a stale cursor (Gmail history too old) restarts with a full sync; each run fetches at most `EMAIL_SYNC_MAX_PAGES` pages and resumes
 from the cursor next time; a provider rate limit keeps progress and blocks further calls until `rate_limited_until`. New messages link to a
 known contact/lead by address and add one `email` entry to the lead's timeline. Demo and real data are separated (`is_demo`, provider
@@ -119,9 +118,7 @@ Every outcome writes an audit event (`email.send_queued`, `email.sent`, `email.s
 
 - The Gmail adapter has not been run against Google (above). Outlook does not exist.
 - Gmail's `create_draft` (provider-side drafts) is not offered: it needs the broader `gmail.compose` scope, which is deliberately not requested.
-- Message bodies are not stored; the inbox decides retention and safe HTML rendering in Prompt 10.
-- Bounce and unsubscribe detection from incoming mail (adding to suppression automatically) is Prompt 10; today suppression is managed by hand
-  (`/suppressions`) and checked at send time.
+- Bounce and explicit opt-out detection from incoming mail now adds to suppression automatically (Prompt 10, see INBOX.md); the list can still be managed by hand (`/suppressions`) and is checked at send time.
 - Sync runs when asked (button or API); background scheduling arrives with the job runner (Prompt 11).
 - The send-rate limiter fails open if Redis is down (as the sign-in limiter does); approval, suppression and idempotency still hold.
 - A crash between "queued" and the provider call leaves a `queued` message that an owner must resolve by hand.

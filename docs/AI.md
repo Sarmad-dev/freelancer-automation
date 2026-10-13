@@ -130,10 +130,8 @@ and the safety layer; against a real provider it measures the model. Grow the se
 ## Known gaps
 
 - The gateway adapter has not been run against a live provider (see above); Jev specifically is unverified.
-- Nothing calls these tasks from the UI yet: the inbox (Prompt 10) and workflows (Prompt 11/13) will. Only the status endpoint
-  is exposed.
-- Messages carry a 500-character snippet, so summaries and classification of real mail will see short text until the email
-  framework stores more (Prompt 9).
+- The inbox (Prompt 10) uses `classify_reply` and `draft_outreach` (reply mode, prompt versions `v2`); workflows (Prompt 11/13) will use the rest.
+- Classification and reply drafting read the stored cleaned body (capped), not the 500-character snippet.
 - Cost figures are estimates from a configured price list; the stand-in is always 0.
 - No streaming, no tool use, no per-user opt-out of sending message content to a provider (post-MVP: "privacy settings controlling
   whether message content is sent to each AI provider").

@@ -57,6 +57,9 @@ http(s) in the browser (`lib/safe-url.ts`).
 ## Email framework (MVP Prompt 9)
 `app/mailbox/` holds the `EmailConnector` interface, normalised types, the demo and Gmail connectors, MIME helpers and the registry. `services/email_accounts.py` owns OAuth, token refresh, sync and disconnect; `services/drafts.py` owns approval and the guarded send path; `services/suppression.py` is the do-not-contact list. Routers: `email` (providers, accounts, connect, sync, test, disconnect), `email_oauth` (the provider redirect target), `drafts`, `suppressions`. On the web, `/integrations` shows mailboxes and the connectors that exist. See [EMAIL.md](EMAIL.md) and D49–D54.
 
+## Inbox (MVP Prompt 10)
+`mailbox/sanitize.py` cleans bodies (text and allow-listed HTML) and `mailbox/signals.py` recognises bounce notices. `services/inbox_events.py` runs when a message is first stored (body, bounce, reply notification, job enqueue); `services/email_jobs.py` is the DB-backed classification queue and applies results; `services/inbox.py` serves lists, threads, counts and manual classification; `services/replies.py` turns a reply suggestion into an ordinary draft; `services/follow_ups.py` is the gate any automated follow-up must pass. Router: `inbox`. On the web, `/inbox` (list | thread | reply editor) with formatted HTML only inside a sandboxed iframe. See [INBOX.md](INBOX.md) and D55–D61.
+
 ## Contracts
 FastAPI is the single source of truth. `pnpm contracts:generate` exports `packages/contracts/openapi.json`
 and regenerates `src/generated/api.d.ts` (openapi-typescript). The web app uses `openapi-fetch` through

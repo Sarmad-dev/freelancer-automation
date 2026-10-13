@@ -138,6 +138,8 @@ Details in [EMAIL.md](EMAIL.md). Provider tokens exist only in the encrypted cre
 
 Inbox (details in [INBOX.md](INBOX.md)): incoming mail is untrusted. Bodies are rebuilt by an allow-list sanitiser, images and remote content are removed (reading mail never contacts a third party), HTML renders only in a sandboxed iframe with a restrictive CSP, and attachments are metadata only. Message text reaches a model only after minimisation and fencing, and model output must quote evidence that really appears in the message. Only a deterministic opt-out rule (never the model alone) suppresses a sender automatically; suppression is enforced again server-side at send time. Suggested replies are drafts that a person must approve. Message text never appears in logs or audit events, and an owner can delete synced mail.
 
+Workflows (details in [WORKFLOWS.md](WORKFLOWS.md)): a workflow can only send email after a person approved exactly that draft in the same run (proved by the validator and checked again by the engine), and only the owner decides approvals. Runs start in test mode, where record changes and sending are simulated; going live needs an explicit, audited confirmation. The engine never stores message text, addresses or exception text in run records, step logs or audit events, only ids, counts, enumerations and fixed error categories. Templates can only use four allow-listed placeholders. Everything is workspace-scoped, and workspace limits (workflows, runs in progress, runs per day) apply.
+
 ## Known gaps (tracked)
 
 - **No email verification yet** (`email_verified_at` is always null). Consequently sign-up reveals whether an

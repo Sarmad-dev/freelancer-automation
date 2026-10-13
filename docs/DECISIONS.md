@@ -226,3 +226,30 @@ A reply suggestion calls `draft_outreach` with the incoming message fenced as un
 
 ## D61 — One follow-up gate for future automation
 `follow_ups.check()` is the single place that decides whether an automated follow-up may go: not if the recipient is suppressed, not if they replied after our last message. Workflows (Prompt 11+) must call it; no sequence engine exists yet.
+
+## D62 — The workflow engine is backend code; the editor only draws
+The server is authoritative for what a workflow means: definition, validation, execution. The TypeScript package (`workflow-core`) checks only the *structural* problems so an editor can respond instantly, and is tested against the same fixtures as the server so the two cannot drift. Settings, typed flow and the safety rules are server-only; an editor asks `POST /workflows/validate` for those.
+
+## D63 — Versions are immutable; invalid ones can be saved but not run
+Every save creates a new version and never edits an old one, so a run pinned to a version keeps meaning the same thing. Work in progress may be saved with its problems listed, but only a version with no issues can be switched on or run. Cost: versions accumulate (no pruning yet).
+
+## D64 — Every output port needs a destination, and send needs an approved path
+A condition needs *true* and *false*, an approval gate needs *approved* and *rejected*, and no node may lead nowhere: a rejection or a "no" is a decision the author makes on purpose. A `send_email` node is only valid on the approved path of a gate that follows the draft, on every path, with no new draft in between. The validator proves this with a data-flow check over typed *facts*, instead of trusting naming or order.
+
+## D65 — The queue is the database
+Runs are rows claimed with a conditional UPDATE under a 5-minute lease; delays are a `wake_at`, approvals are `approval_requests` rows, retries are a backoff `wake_at`. No timers in memory, nothing held open by a request, and a restart loses nothing. Cost: latency is the poll interval and recovery of a dead worker takes up to a lease. A distributed engine is explicitly post-MVP.
+
+## D66 — A step is recorded before it happens, and finishes atomically with its effect
+The step row is committed as `running` before the executor runs. The executor's own writes (tasks, notifications, record changes) commit in the same transaction as the step's result and the run's cursor, so a crash leaves nothing half-done. The one external effect, the provider send, carries an idempotency key and the existing send path refuses a second send; an unconfirmed send is never retried automatically.
+
+## D67 — Failures have categories, not messages
+A failed step stores a category from a fixed list and fixed plain-language text, never exception text, provider responses or content. Only retryable categories retry automatically (with backoff and a per-node limit); a person can retry a failed step by hand, except a send whose outcome is unknown until they resolve it.
+
+## D68 — Approval is bound to the exact text and decided only by the owner
+An approval request holds a hash of the draft's recipient, subject and body. Approving approves that text; if the draft changes first, the approval is invalidated and the run stops rather than send something nobody read. Unanswered approvals expire onto the rejected path. Runs act as the workspace owner; members can only read.
+
+## D69 — Test mode simulates what leaves the system or changes records
+A workflow starts in test mode; going live needs it to be active and an explicit confirmation, and is audited. In test mode record changes and sending are simulated and say so; AI calls, drafts, approvals, tasks and notifications are real so the whole path can be rehearsed. A workflow that is not switched on can only be run by hand, in test mode.
+
+## D70 — One event, one run; one item, one run at a time
+Runs are unique per (workspace, workflow, idempotency key); events key on the occurrence (a lead id, a message id). A workflow also does not run twice at once for the same lead or conversation. Events never raise into the code that emitted them: a workflow problem must not break creating a lead or syncing mail.

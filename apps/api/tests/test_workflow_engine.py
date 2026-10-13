@@ -407,9 +407,10 @@ def test_a_delay_survives_a_restart_because_it_is_only_rows(env: WfEnv) -> None:
     env.client.app.state.ai_provider = None  # (nothing in memory matters)
     first = env.deps()
     env.clock.advance(days=1, minutes=1)
+    import uuid
+
     from app.db.session import get_sessionmaker
     from app.workflows import engine
-    import uuid
 
     stats = engine.process_batch(
         get_sessionmaker(), first, workspace_id=uuid.UUID(env.wid)
@@ -829,7 +830,6 @@ def test_a_send_that_happened_but_was_never_recorded_is_not_sent_again(
 
 def test_a_send_the_provider_never_confirmed_is_never_retried_blindly(mail: WfEnv) -> None:
     from app.mailbox.errors import SendOutcomeUnknown
-
     from app.mailbox.types import SendResult
 
     assert mail.fake is not None
@@ -979,3 +979,73 @@ def test_a_task_is_created_once_even_if_its_step_runs_again(env: WfEnv) -> None:
     ]
     assert len(tasks) == 1
     _ = get_settings
+
+
+# ----------------------------------------------------------------------------- a reply starts a workflow
+
+
+def reply_flow() -> dict:  # type: ignore[type-arg]
+    return graph(
+        [
+            node("t", "trigger", event="reply_received"),
+            node("k", "ai_classify_reply"),
+            node(
+                "c",
+                "condition",
+                field="classification.category",
+                op="in",
+                value=["interested", "question"],
+            ),
+            node("task", "create_task", title="Answer the {category} reply"),
+            node("end", "end"),
+            node("quiet", "end", reason="nothing to do"),
+        ],
+        [
+            edge("t", "k"),
+            edge("k", "c"),
+            edge("c", "task", "true"),
+            edge("c", "quiet", "false"),
+            edge("task", "end"),
+        ],
+    )
+
+
+def test_a_reply_starts_the_workflow_once_and_the_run_classifies_and_acts(mail: WfEnv) -> None:
+    from datetime import UTC, datetime, timedelta
+
+    from tests.email_helpers import remote, sync_page, ws_url
+
+    assert mail.fake is not None and mail.account is not None
+    wf = mail.create(reply_flow(), activate=True)
+    sent = datetime.now(UTC) - timedelta(hours=2)
+    msgs = (
+        remote("o1", "thr", direction="outbound", subject="Hello", when=sent),
+        remote(
+            "i1",
+            "thr",
+            subject="Re: Hello",
+            when=sent + timedelta(hours=1),
+            text="Sounds great, can we talk next week?",
+        ),
+    )
+    for _ in range(3):  # syncing the same page again and again must not start more runs
+        mail.fake.syncs = [sync_page(*msgs)]
+        assert (
+            mail.client.post(ws_url(mail.wid, f"/accounts/{mail.account['id']}/sync")).status_code
+            == 200
+        )
+    runs = mail.client.get(mail.url("/workflow-runs"), params={"workflow_id": wf}).json()
+    assert runs["total"] == 1
+    run_summary = runs["items"][0]
+    assert (
+        run_summary["trigger_type"] == "reply_received"
+        and run_summary["subject_type"] == "conversation"
+    )
+    assert run_summary["status"] == "queued" and run_summary["mode"] == "test"
+    mail.drain()
+    run = mail.run(run_summary["id"])
+    assert run["status"] == "succeeded", run["error_summary"]
+    assert [s["node_key"] for s in run["steps"]] == ["t", "k", "c", "task", "end"]
+    assert run["context"]["classification"]["category"] in ("interested", "question")
+    titles = [t["title"] for t in mail.client.get(mail.url("/tasks")).json()["items"]]
+    assert any(t.startswith("Answer the ") and t.endswith(" reply") for t in titles)

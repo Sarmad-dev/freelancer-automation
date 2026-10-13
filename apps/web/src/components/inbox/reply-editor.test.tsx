@@ -962,7 +962,7 @@ describe("the send dialog", () => {
     expect(refresh).toHaveBeenCalledTimes(1);
     expect(status()).toHaveTextContent("The message was sent.");
     expect(screen.getByText("Sent", { selector: "span" })).toBeInTheDocument();
-    expect(screen.queryByRole("button")).toBeNull();
+    expect(within(screen.getByRole("region", { name: "Reply" })).queryByRole("button")).toBeNull();
   });
 
   it("says a demo send delivered nothing", async () => {

@@ -92,7 +92,7 @@ export function ReplyEditor({
   const [sendOpen, setSendOpen] = useState(false);
   const [sendKey, setSendKey] = useState("");
   const [sendIssue, setSendIssue] = useState<SendProblem | null>(null);
-  const [focusBody, setFocusBody] = useState(false);
+  const focusBody = useRef(false);
 
   // The page's copy is the source of truth: when it changes, follow it. Text the person is typing is
   // only replaced when the draft itself is a different one or a newer version.
@@ -107,12 +107,14 @@ export function ReplyEditor({
     setDraft(next);
   }
 
+  // A draft the person starts themselves is ready to type into.
+  const draftId = draft?.id;
   useEffect(() => {
-    if (focusBody) {
+    if (focusBody.current && draftId) {
+      focusBody.current = false;
       bodyRef.current?.focus();
-      setFocusBody(false);
     }
-  }, [focusBody]);
+  }, [draftId]);
 
   // The shared dialog hands focus back to whatever had it when it opened, but its own autofocused Cancel
   // button has already taken it by then. So the editor puts focus back on the Send button itself.
@@ -232,7 +234,7 @@ export function ReplyEditor({
       if (r?.data) {
         adopt(r.data);
         setSuggestion(null);
-        setFocusBody(true);
+        focusBody.current = true;
         done(
           "Draft started",
           "Write your message, then approve it.",

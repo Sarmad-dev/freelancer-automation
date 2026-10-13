@@ -11,6 +11,10 @@ from pydantic import AfterValidator
 
 _CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")  # keeps \t \n \r
 _WS = re.compile(r"\s+")
+# Invisible / direction-override characters. They are used to hide text from reviewers and to smuggle
+# instructions into content later fed to a model ("Trojan Source"). Zero-width joiners (U+200C/D) are kept
+# because emoji and several scripts need them.
+_INVISIBLE = re.compile("[\u200b\u200e\u200f\u202a-\u202e\u2060-\u2064\u2066-\u2069\ufeff]")
 
 
 def _check_control(value: str) -> str:
@@ -19,12 +23,16 @@ def _check_control(value: str) -> str:
     return value
 
 
+def strip_invisible(value: str) -> str:
+    return _INVISIBLE.sub("", value)
+
+
 def single_line(value: str) -> str:
-    return _WS.sub(" ", _check_control(value)).strip()
+    return _WS.sub(" ", strip_invisible(_check_control(value))).strip()
 
 
 def multi_line(value: str) -> str:
-    return _check_control(value).strip()
+    return strip_invisible(_check_control(value)).strip()
 
 
 def bounded(min_len: int, max_len: int, *, multiline: bool = False) -> AfterValidator:
@@ -38,6 +46,28 @@ def bounded(min_len: int, max_len: int, *, multiline: bool = False) -> AfterVali
 
     return AfterValidator(_validate)
 
+
+def optional_text(max_len: int, *, multiline: bool = False) -> AfterValidator:
+    """Optional free text: blank becomes ``None`` (clears the field), otherwise cleaned and length-checked."""
+
+    def _validate(value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = multi_line(value) if multiline else single_line(value)
+        if not cleaned:
+            return None
+        if len(cleaned) > max_len:
+            raise ValueError(f"Use at most {max_len} characters.")
+        return cleaned
+
+    return AfterValidator(_validate)
+
+
+OptLine100 = Annotated[str | None, optional_text(100)]
+OptLine120 = Annotated[str | None, optional_text(120)]
+OptLine200 = Annotated[str | None, optional_text(200)]
+OptLine300 = Annotated[str | None, optional_text(300)]
+OptNotes = Annotated[str | None, optional_text(4000, multiline=True)]
 
 Name = Annotated[str, bounded(1, 120)]
 
@@ -96,3 +126,24 @@ def clean_public_url(raw: str) -> str:
     except ValueError as exc:
         raise ValueError("Enter a valid URL.") from exc
     return parts._replace(scheme=parts.scheme, netloc=parts.netloc.lower()).geturl()
+
+
+_FOREIGN_SCHEME = re.compile(r"^[a-z][a-z0-9+.-]*:(?!\s)", re.I)
+
+
+def clean_source_ref(raw: str) -> str:
+    """A provenance reference: a public http(s) URL or a plain label such as "Resume 2026.pdf".
+
+    Anything that looks like another URL scheme (``javascript:``, ``data:``, ``file:`` ...) is rejected so it can
+    never end up in an href.
+    """
+    value = single_line(raw)
+    if not value:
+        raise ValueError("This field is required.")
+    if len(value) > 500:
+        raise ValueError("Use at most 500 characters.")
+    if re.match(r"^https?://", value, re.I):
+        return clean_public_url(value)
+    if _FOREIGN_SCHEME.match(value) or "://" in value:
+        raise ValueError("Use a web address (https://...) or a plain label.")
+    return value

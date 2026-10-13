@@ -31,6 +31,38 @@ proxy (`/api/v1/*`) so the HttpOnly session cookie is first-party. Full details,
 [SECURITY.md](SECURITY.md). Workspace-scoped routes live under `/api/v1/workspaces/{id}/...` and are
 authorised by membership. Error responses use one envelope, `{"error": {"code", "message", "fields?"}}`.
 
+## Data model and API foundations (MVP Prompt 4)
+35 tenant-aware tables; tenancy is enforced by the database (composite `(workspace_id, id)` foreign keys, cascades,
+unique constraints) as well as by code. Secrets live only in an encrypted credential store. List endpoints share one
+pagination/sorting/filter contract and error envelope. Full details: [DATA_MODEL.md](DATA_MODEL.md),
+[API_CONVENTIONS.md](API_CONVENTIONS.md).
+
+## Profile, knowledge and AI context (MVP Prompt 5)
+Routers `profile` and `knowledge` call `services/profile.py`, `services/knowledge.py` (lifecycle, import) and
+`services/ai_context.py` (the only selector of AI input; see D27). The web app's AI Workspace has three route-based tabs
+(Overview, Profile, Knowledge). Pages are server components that read through the typed client with the visitor's session
+cookie (`lib/server-api.ts`, `lib/workspace.ts`); editing UIs are client components that mutate through the same-origin
+proxy and then `router.refresh()`. Stored text is always rendered as React text nodes, and links are re-validated to
+http(s) in the browser (`lib/safe-url.ts`).
+
+## Leads, scoring and import (MVP Prompt 6)
+`routers/leads|companies|contacts|fit_scoring|imports` call `services/crm.py` (companies/contacts: find-or-create, duplicates, serialisation), `services/leads.py` (lead rules, stage sync, timeline, tags), `services/fit_scoring.py` (pure scoring functions plus config persistence), `services/lead_import.py` and `services/csvio.py` (strict CSV reading/writing) and `services/lead_export.py`. Scoring, import and export are plain functions of the database and the request, so they run the same from an API call, a test, or later from the workflow engine. In the web app, `/leads` is a section with four tabs (Leads, Companies, Contacts, Fit scoring) plus detail pages and the import wizard; list pages are server components driven by validated URL parameters, so filters, sorting and pagination are links and work without JavaScript.
+
+## Pipeline, tasks and notifications (MVP Prompt 7)
+`routers/opportunities|tasks|notifications` (and `GET /pipeline/board`) call `services/opportunities.py` (deal rules, board aggregation), `services/tasks.py` (idempotent creation, state changes, views), `services/notifications.py` (lazy "due" notifications) and `services/times.py` (zone-aware instants and local-day bounds). On the web, `/pipeline` is a board (native drag and drop plus a keyboard-accessible Move control, optimistic with rollback) and a table; `/pipeline/{id}` is the deal; `/tasks` has the Overdue/Today/Upcoming/No date/Done views; the top-bar bell polls the unread count. `TaskDrawer` and `OpportunityFields` are shared by every page that creates or edits these records.
+
+## AI service layer (MVP Prompt 8)
+`app/ai/` holds `AiService` (`service.py`), versioned `prompts.py`, strict `schemas.py`, `untrusted.py` (minimise, fence, injection signals), `validate.py` (claims, leaks), `rules.py` (opt-out and fallback), providers (`mock`, `gateway`, `disabled`), `inputs.py` (workspace-scoped model inputs) and `evals.py`. `services/ai_context.py` still decides which facts a model may know (D27); `AiService` decides what the model is asked and what it may answer (D43–D48). `GET /ai/status` is the only HTTP surface for now. See [AI.md](AI.md).
+
+## Email framework (MVP Prompt 9)
+`app/mailbox/` holds the `EmailConnector` interface, normalised types, the demo and Gmail connectors, MIME helpers and the registry. `services/email_accounts.py` owns OAuth, token refresh, sync and disconnect; `services/drafts.py` owns approval and the guarded send path; `services/suppression.py` is the do-not-contact list. Routers: `email` (providers, accounts, connect, sync, test, disconnect), `email_oauth` (the provider redirect target), `drafts`, `suppressions`. On the web, `/integrations` shows mailboxes and the connectors that exist. See [EMAIL.md](EMAIL.md) and D49–D54.
+
+## Inbox (MVP Prompt 10)
+`mailbox/sanitize.py` cleans bodies (text and allow-listed HTML) and `mailbox/signals.py` recognises bounce notices. `services/inbox_events.py` runs when a message is first stored (body, bounce, reply notification, job enqueue); `services/email_jobs.py` is the DB-backed classification queue and applies results; `services/inbox.py` serves lists, threads, counts and manual classification; `services/replies.py` turns a reply suggestion into an ordinary draft; `services/follow_ups.py` is the gate any automated follow-up must pass. Router: `inbox`. On the web, `/inbox` (list | thread | reply editor) with formatted HTML only inside a sandboxed iframe. See [INBOX.md](INBOX.md) and D55–D61.
+
+## Workflow engine (MVP Prompt 11)
+`app/workflows/`: `definition.py` (the saved graph), `catalog.py` (the 12 node types: settings, ports, what each needs and gives), `validate.py` (pure validator), `executors.py` (one function per node type), `engine.py` (start, claim, step loop, retries, cancel, manual retry), `approvals.py` (decide, expire, invalidate), `events.py` (start workflows from app events). `services/workflow_defs.py` stores immutable versions and shapes API output; routers `workflows`, `workflow-runs`, `approvals`. The queue is the database (`workflow_runs` + a lease), run by `python -m app.cli process-workflows` or by a background task after a request that made runs due. `packages/workflow-core` mirrors the structural checks for the future editor. See [WORKFLOWS.md](WORKFLOWS.md) and D62–D70.
+
 ## Contracts
 FastAPI is the single source of truth. `pnpm contracts:generate` exports `packages/contracts/openapi.json`
 and regenerates `src/generated/api.d.ts` (openapi-typescript). The web app uses `openapi-fetch` through
@@ -45,8 +77,7 @@ per-package build step.
 
 ## Database
 SQLAlchemy 2.0 declarative models with deterministic constraint names; Alembic migrations in
-`apps/api/alembic/versions`. The scaffold has one table, `app_metadata`, used by seeding and migration tests.
-Domain entities arrive in MVP Prompt 4.
+`apps/api/alembic/versions`. Migrations `0001`-`0003` create the scaffold, identity/onboarding and the full MVP domain (see DATA_MODEL.md).
 
 ## Known limitations
 - Docker Compose provides PostgreSQL and Redis only; app containers are not provided yet.

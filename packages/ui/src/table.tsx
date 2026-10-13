@@ -12,7 +12,7 @@ export function TableContainer({ className, ...props }: HTMLAttributes<HTMLDivEl
   return (
     <div
       tabIndex={0}
-      className={cn("overflow-x-auto rounded-lg border border-line bg-surface", className)}
+      className={cn("relative overflow-x-auto rounded-lg border border-line bg-surface", className)}
       {...props}
     />
   );

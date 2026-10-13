@@ -19,6 +19,7 @@ from app.errors import AppError
 from app.mailer import Mailer
 from app.ratelimit import RateLimiter
 from app.security.cookies import clear_cookie_header, cookie_name
+from app.security.credentials import CredentialStore
 from app.security.tokens import hash_token
 
 # Refresh last_seen_at (and the cookie's Max-Age) at most this often to avoid a write per request.
@@ -38,6 +39,12 @@ def get_mailer(request: Request) -> Mailer:
     return mailer
 
 
+def get_credentials(request: Request) -> CredentialStore:
+    store: CredentialStore = request.app.state.credentials
+    return store
+
+
+CredentialsDep = Annotated[CredentialStore, Depends(get_credentials)]
 LimiterDep = Annotated[RateLimiter, Depends(get_limiter)]
 MailerDep = Annotated[Mailer, Depends(get_mailer)]
 

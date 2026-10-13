@@ -38,7 +38,12 @@ Follow the playbook's MVP prompts in order; each phase ends with updated docs an
 | 1 | Repository scaffold and local development | **Done** |
 | 2 | Design system, app shell, navigation | **Done** |
 | 3 | Authentication, workspace, onboarding | **Done** |
-| 4 | Domain model and API foundations | Not started |
-| 5–16 | Profile, leads, pipeline, AI, email, inbox, workflows, approvals, integrations, analytics, release readiness | Not started |
+| 4 | Domain model and API foundations | **Done** |
+| 5 | Freelancer profile and approved knowledge | **Done** |
+| 6 | Leads, contacts, companies, CSV import, fit scoring | **Done** |
+| 7 | Pipeline, tasks, activity timeline | **Done** |
+| 8 | AI provider abstraction and safe structured outputs | **Done** |
+| 9 | Email integration framework and demo mode | **Done** (Gmail adapter unverified live) |
+| 10–16 | Inbox, workflows, approvals, integrations, analytics, release readiness | Not started |
 
 See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for details.

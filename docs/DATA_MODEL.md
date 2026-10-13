@@ -1,0 +1,102 @@
+# Data model
+
+_Status: MVP Prompt 6. 38 application tables (plus Alembic's version table). Source of truth: `apps/api/app/db/models*.py`;
+migrations: `apps/api/alembic/versions` (`0003_domain_model` added 26 tables: everything except the Identity group, `freelancer_profiles` and `audit_events`; `0004_profile_fields_and_knowledge_review` added the profile fields, the knowledge review lifecycle and `knowledge_item_versions`; `0005_leads_fit_scoring_and_csv_import` added `fit_scoring_configs`, `import_jobs` and the lead budget/score-time columns)._
+
+## Entities
+
+| Group | Tables | Notes |
+|---|---|---|
+| Identity & tenancy | `users`, `workspaces`, `memberships`, `sessions`, `password_reset_tokens`, `onboarding_progress` | MVP: one personal workspace, one `owner` membership. Roles `owner/admin/member` are CHECK-constrained so teams can be added without a schema change. |
+| Profile & knowledge | `freelancer_profiles`, `knowledge_items`, `knowledge_item_versions` | Profile has a `version` (optimistic concurrency). Knowledge has provenance (`source_type` manual/upload/extracted, `source_ref`, `created_by_user_id`), review `status` (`draft`/`pending_review`/`approved`/`rejected`), `version`, approver and an independent `is_enabled` switch. Only items that are `approved` **and** enabled may reach AI context. `knowledge_item_versions` holds one content snapshot per version (cascade-deleted with the item). |
+| CRM | `companies`, `contacts`, `leads`, `tags`, `lead_tags`, `pipeline_stages`, `opportunities`, `activities`, `tasks`, `fit_scoring_configs`, `import_jobs` | Leads carry `fit_score` + `fit_explanation` (JSON), `budget_signal` and provenance (`source`, `source_retrieved_at`). `fit_scoring_configs` holds the user's criteria (one versioned row per workspace); `import_jobs` records CSV imports (counts and a capped error list, never the file). |
+| Email & outreach | `email_accounts`, `conversations`, `messages`, `drafts`, `suppression_entries` | Message **metadata only** (no body column yet). Drafts carry `content_hash` / `approved_content_hash` so approval binds to exact content. |
+| Integrations & secrets | `integration_connections`, `credential_secrets` | Connections hold a `credential_id` only. Secrets live encrypted in `credential_secrets`. |
+| Workflows | `workflows`, `workflow_versions`, `workflow_nodes`, `workflow_edges`, `workflow_runs`, `workflow_step_runs`, `approval_requests` | Versions are immutable snapshots (nodes/edges are rows). A run is pinned to one version. |
+| Operations | `usage_records`, `notifications`, `audit_events` | Email accounts keep only a `credential_id` (tokens live encrypted in `credential_secrets`), health/rate-limit timestamps and an opaque sync cursor; each outbound message links to the draft that produced it (`messages.draft_id`, unique per draft) with a short `delivery_error_code`. Usage never stores prompts/content (AI calls record task, provider, model, prompt version, tokens, latency, success and a short `error_code`). Notifications de-dupe on `(user_id, dedupe_key)`. |
+
+## Conventions (enforced by `tests/test_schema_guards.py`, which also protects tables added later)
+
+1. **IDs:** random UUIDv4 primary keys (`id`), unguessable in URLs and generatable anywhere. (`lead_tags` uses its composite key.)
+2. **Timestamps:** `created_at` on every row; `updated_at` on mutable rows; all `timestamptz` (UTC instants). `usage_records` uses `occurred_at`; workflow nodes/edges are immutable parts of a timestamped version.
+3. **Tenancy:** every tenant-owned table has `workspace_id NOT NULL → workspaces(id) ON DELETE CASCADE` and an index/unique starting with `workspace_id`. The one exception is `audit_events` (nullable, `SET NULL`) so the audit trail outlives a deleted workspace.
+4. **Tenant-safe references:** a foreign key from one tenant table to another is **composite** `(workspace_id, x_id) → target(workspace_id, id)` (`app.db.mixins.tenant_fk`; targets declare `UNIQUE(workspace_id, id)`). The database itself refuses a lead that points at another tenant's company — application bugs cannot create cross-tenant links. 30 such references are tested with real cross-tenant inserts. Nullable relations are not checked when NULL (MATCH SIMPLE).
+5. **Enumerations:** strings with named CHECK constraints (`app/domain.py` is the single list), not native enums, so adding a value is a small migration and SQLite/PostgreSQL behave alike.
+6. **Duplicate protection (unique constraints, per workspace):** company domain, contact email, tag name (normalised), pipeline-stage key, suppression email, email account `(provider, provider_account_id)`, integration `(connector, external_account_id)`, conversation `(account, thread)`, message `(account, provider_message)`, workflow `(workflow, version)`, node/edge key per version, run event `(workflow, idempotency_key)`, step attempt `(run, node, attempt)`, side-effect `idempotency_key`, task and draft-send idempotency keys, notification `(user, dedupe_key)`. Provider ids make sync idempotent (upsert, never duplicate).
+7. **Integrity beyond tenancy:** a run's pinned version must belong to the run's workflow; an edge's endpoints must be nodes of the same version; an activity needs a subject; money is `NUMERIC(14,2)` with a 3-letter currency; scores/probabilities are range-checked.
+8. **No secrets outside the vault:** no column anywhere is named like a token/key/secret (tested). `email_accounts` and `integration_connections` reference `credential_secrets` by id. See "Credentials" below.
+9. **Sample data:** `is_sample` on companies, contacts, leads, opportunities, tasks, conversations, messages and drafts marks seeded demo data so it can be labelled and cleaned up.
+
+## Credentials
+
+`app/security/credentials.py`: `EncryptedDbCredentialStore` (Fernet: AES + HMAC) behind a `CredentialStore` protocol.
+Keys come from `CREDENTIAL_ENCRYPTION_KEYS="v2:<key>,v1:<key>"` (first = current; required in production, ephemeral in dev).
+The plaintext envelope embeds `workspace_id` and `purpose`, both verified on read, so a ciphertext re-pointed at another
+tenant or purpose is rejected. Rotation: add a new first key, call `rewrap()` per secret, then retire the old key.
+Reads need the workspace id, so code that forgot scoping fails closed. A KMS/Vault-backed implementation can replace it
+behind the same protocol.
+
+## Deletion and retention
+
+| Data | Behaviour |
+|---|---|
+| Companies, contacts, leads | **Soft delete** via `archived_at` (users archive and restore). Hard delete is for erasure requests and cascades dependents. |
+| A lead's tags, activities, opportunities, drafts, tasks | Deleted with the lead (privacy erasure). Companies/tags/stages shared with other leads are kept. |
+| Pipeline stages, companies referenced by leads, credentials referenced by accounts | **RESTRICT**: cannot be deleted while in use (reassign or archive first). |
+| Tags | Hard delete; only the `lead_tags` links go. |
+| Workspace | Hard delete cascades **every** tenant row (tested against a fully seeded workspace). `audit_events` are kept with `workspace_id = NULL`. The user account remains. |
+| Disconnecting an integration | App deletes the `credential_secrets` row and nulls `credential_id`; metadata rows stay for history. |
+| Audit events | Append-only; retention period to be set with the governance work (post-MVP). |
+| Message content | Not stored (metadata + 500-char snippet). Body storage/retention is decided in MVP Prompt 10. |
+| Usage records | Kept for metering; contain no content. |
+
+Soft deletion is used only where users reasonably want records back; everything else is hard-deleted to keep erasure simple.
+
+## Migrations
+
+- Autogenerated, then reviewed and hand-extended (`0003`: membership role CHECK, default-stage backfill). Frozen data (default stages) is copied into the migration, never imported from app code.
+- **Backfill:** existing workspaces receive the 8 default pipeline stages (tested on SQLite with pre-existing data; found and fixed a SQLite-only string-id bug).
+- **Rollback:** `pnpm db:downgrade` / `alembic downgrade 0002` drops all 26 tables created in `0003`, **destroying CRM, email-metadata and workflow data**. Export first. Downgrade is repeatable (tested up→down→up→down). Identity/auth tables are untouched.
+- PostgreSQL runs DDL transactionally (a failed migration leaves nothing behind). **SQLite does not**: a failed migration can leave a half-applied schema; delete the dev database file and re-run.
+- `alembic check` runs in the tests (models and migrations must not drift).
+- Never edit an applied migration; add a new one. Destructive changes need an expand/contract sequence.
+
+## Safe evolution path
+
+- **Add a column:** nullable (or with a server default) in a new revision; backfill separately for large tables.
+- **Add an enum value:** edit `app/domain.py`, add a revision that replaces the CHECK constraint (batch mode on SQLite).
+- **Message bodies:** add `message_bodies(workspace_id, message_id, body_text, retention_until)` rather than widening `messages`.
+- **Teams/organisations:** add `organizations` and move `workspaces.organization_id`; `memberships` already carries roles. RBAC rules go in `deps.py` (`require_owner` is the pattern).
+- **Search/scale:** add `pg_trgm`/GIN indexes (`leads.title`, `companies.name`) once Prompt 6 defines the queries; partition `audit_events`/`usage_records` by month if volume demands.
+- **Lead fit criteria, saved views, custom fields:** new tables referencing `(workspace_id, id)` with `tenant_fk`; the guard tests will enforce the rules automatically.
+- **ULIDs:** if time-ordered ids are wanted later, switch the default factory in `mixins.new_uuid`; the column type is unchanged.
+
+## Profile and knowledge (MVP Prompt 5)
+- **Lifecycle:** `draft`/`pending_review` --approve(version)--> `approved` --edit--> `pending_review` (version +1, history
+  snapshot) ; any --reject--> `rejected` --edit--> `draft`. Approval names the version that was reviewed; a changed item
+  answers 409 `stale_version`. Extracted or imported items always arrive as `pending_review`.
+- **`is_enabled`** is an on/off switch, not a content change: no version bump, approval kept. Legacy `disabled` status
+  rows were migrated to `draft` + `is_enabled = false`; the downgrade restores them.
+- **Profile fields** added: `excluded_customers`, `differentiators`, `pricing_guidance`, `preferred_cta` (and `version`).
+  Private fields (`pricing_guidance`, `excluded_customers`, `tone_notes`, business goal) are never part of the public summary.
+- **Deletion:** deleting an item removes its history. Existing drafts are not rewritten (they keep their own stored text).
+
+## Leads, fit scoring and CSV import (MVP Prompt 6)
+- **Provenance.** Companies, contacts and leads carry `source` (a label such as `manual`, `CSV import`, or a name from the file's own source column) and `source_retrieved_at` (when data that came from outside the app was brought in; null for things typed by hand). Nothing is fetched or scraped; enrichment from approved sources will use the same two columns.
+- **Pipeline link.** A lead has a `status` and a `stage_id`. Default stage keys equal the statuses (`new`, `contacted`, `replied`, `qualified`, `won`, `lost`), so changing one moves the other; the extra stages (`meeting`, `proposal`) move the stage only. Prompt 7 builds the pipeline views on top.
+- **Fit score.** `fit_score` is `NULL` or a multiple of 5 (0-100). `fit_explanation` (JSON, `version: 1`) holds the band (`strong` >= 70, `possible` >= 45, `weak`, `insufficient`), the per-criterion outcome with evidence, the weights, `confidence` (share of the weighting that had data), warnings, and the `config_version` / `profile_version` it was computed with, so a score can be recognised as stale. Scores that predate explanations were cleared by migration 0005.
+- **Criteria.** `fit_scoring_configs.criteria` is the list of five criteria (service match, industry, geography, company size, budget), each with `enabled`, `weight` (1-10) and its own options; `version` increases only when the content changes.
+- **Budget** is a user-supplied signal (`low`/`medium`/`high`, NULL = unknown). It is never inferred.
+- **Do-not-contact** is not stored on contacts: it is derived from `suppression_entries` by email, so it cannot drift and every send path sees the same answer.
+- **Imports.** `import_jobs` keeps the file name, mapping (column names only), counts, and up to 1,000 per-row problems (row number, column, message, offending value truncated to 200 characters, and whether the row was an error or a skipped duplicate). The raw file is never stored.
+- **Archive, not delete.** Companies, contacts and leads are archived (`archived_at`); archived records are read-only until restored. Deleting a lead or workspace still cascades as described above.
+
+## Pipeline, tasks and notifications (MVP Prompt 7)
+No new tables: the model from Prompt 4 already had `opportunities`, `tasks`, `activities`, `notifications` and `pipeline_stages`; this phase adds the rules around them.
+- **Deals.** `status` (`open` / `won` / `lost`) follows the stage (the won and lost stages close a deal, setting `closed_at`); `loss_reason` exists only on lost deals; `probability` is nullable and never defaulted; `value_amount` is `NUMERIC(14,2)` with a 3-letter `currency`. Deals reference their lead and stage through composite tenant keys.
+- **Timeline.** A deal's activities carry both `opportunity_id` and the lead's `lead_id`, so they appear on the deal and on the lead.
+- **Tasks.** `due_at` / `remind_at` are UTC instants; `due_timezone` is the zone they were meant in. `idempotency_key` is unique per workspace. A task may link to a lead, a deal and/or a conversation (the deal's lead is filled in automatically; inconsistent links are refused). Deleting a lead or deal deletes its tasks.
+- **Notifications.** One row per (user, `dedupe_key`); task notifications use `task:<id>:<due|remind>:<epoch>` so rescheduling creates a new notification instead of colliding. `link` is a relative path only.
+
+- **Message bodies (Prompt 10).** `message_bodies` holds one cleaned body per message (`body_text`, sanitised `body_html`, `text_truncated`, `images_blocked`, `sanitizer_version`) so it can be deleted without touching conversations. `email_jobs` has one row per (message, kind) with status, attempts, `run_after`, `locked_until` lease and a short error code. Conversations carry the classification (`classification`, confidence, source, evidence, `classified_message_id`, `classified_at`) and `needs_review` with a `review_reason`; `messages.is_bounce` marks delivery-failure notices. Deleting a workspace removes all of it.
+- **Workflow engine (Prompt 11).** `workflow_versions` also keep `valid`, `issues` and `trigger_event` (the result of validating that immutable snapshot); `workflows.trigger_event` is the active version's trigger, so an event finds the workflows listening to it. `workflow_runs` carry the `subject` (lead or conversation), `current_node_key`, `context` (ids and short enumerations only), `steps_taken`, `attempt_floor`, a lease (`locked_until`, `lock_token`), `cancel_requested_at` and `started_by_user_id`; `wake_at` serves both delays and retry backoff. `workflow_step_runs` add the `port` taken. `approval_requests` are unique per step attempt and bound to a `payload_hash` of the draft's recipient, subject and body. Runs are unique per `(workspace, workflow, idempotency_key)`.

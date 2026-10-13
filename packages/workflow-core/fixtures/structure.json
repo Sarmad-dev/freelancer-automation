@@ -1,0 +1,806 @@
+{
+  "structural_codes": [
+    "ambiguous_branch",
+    "cycle",
+    "dangling_edge",
+    "duplicate_edge_id",
+    "duplicate_node_id",
+    "missing_end",
+    "missing_trigger",
+    "multiple_triggers",
+    "trigger_has_incoming",
+    "unhandled_branch",
+    "unknown_node_type",
+    "unknown_port",
+    "unreachable_node"
+  ],
+  "cases": [
+    {
+      "name": "a linear flow",
+      "definition": {
+        "schemaVersion": 1,
+        "nodes": [
+          {
+            "id": "t",
+            "type": "trigger",
+            "config": {
+              "event": "manual",
+              "subject": "lead"
+            }
+          },
+          {
+            "id": "n",
+            "type": "notify",
+            "config": {
+              "title": "x"
+            }
+          },
+          {
+            "id": "end",
+            "type": "end",
+            "config": {}
+          }
+        ],
+        "edges": [
+          {
+            "id": "t-n-next",
+            "source": "t",
+            "target": "n",
+            "branch": null
+          },
+          {
+            "id": "n-end-next",
+            "source": "n",
+            "target": "end",
+            "branch": null
+          }
+        ]
+      },
+      "codes": []
+    },
+    {
+      "name": "a branching flow with approval",
+      "definition": {
+        "schemaVersion": 1,
+        "nodes": [
+          {
+            "id": "t",
+            "type": "trigger",
+            "config": {
+              "event": "manual",
+              "subject": "lead"
+            }
+          },
+          {
+            "id": "d",
+            "type": "ai_draft",
+            "config": {}
+          },
+          {
+            "id": "g",
+            "type": "approval_gate",
+            "config": {}
+          },
+          {
+            "id": "s",
+            "type": "send_email",
+            "config": {}
+          },
+          {
+            "id": "end",
+            "type": "end",
+            "config": {}
+          },
+          {
+            "id": "no",
+            "type": "end",
+            "config": {}
+          }
+        ],
+        "edges": [
+          {
+            "id": "t-d-next",
+            "source": "t",
+            "target": "d",
+            "branch": null
+          },
+          {
+            "id": "d-g-next",
+            "source": "d",
+            "target": "g",
+            "branch": null
+          },
+          {
+            "id": "g-s-approved",
+            "source": "g",
+            "target": "s",
+            "branch": "approved"
+          },
+          {
+            "id": "g-no-rejected",
+            "source": "g",
+            "target": "no",
+            "branch": "rejected"
+          },
+          {
+            "id": "s-end-next",
+            "source": "s",
+            "target": "end",
+            "branch": null
+          }
+        ]
+      },
+      "codes": []
+    },
+    {
+      "name": "no nodes",
+      "definition": {
+        "schemaVersion": 1,
+        "nodes": [],
+        "edges": []
+      },
+      "codes": ["missing_trigger"]
+    },
+    {
+      "name": "no trigger",
+      "definition": {
+        "schemaVersion": 1,
+        "nodes": [
+          {
+            "id": "end",
+            "type": "end",
+            "config": {}
+          }
+        ],
+        "edges": []
+      },
+      "codes": ["missing_trigger"]
+    },
+    {
+      "name": "no end",
+      "definition": {
+        "schemaVersion": 1,
+        "nodes": [
+          {
+            "id": "t",
+            "type": "trigger",
+            "config": {
+              "event": "manual",
+              "subject": "lead"
+            }
+          }
+        ],
+        "edges": []
+      },
+      "codes": ["missing_end", "unhandled_branch"]
+    },
+    {
+      "name": "two triggers",
+      "definition": {
+        "schemaVersion": 1,
+        "nodes": [
+          {
+            "id": "t",
+            "type": "trigger",
+            "config": {
+              "event": "manual",
+              "subject": "lead"
+            }
+          },
+          {
+            "id": "t2",
+            "type": "trigger",
+            "config": {
+              "event": "manual"
+            }
+          },
+          {
+            "id": "end",
+            "type": "end",
+            "config": {}
+          }
+        ],
+        "edges": [
+          {
+            "id": "t-end-next",
+            "source": "t",
+            "target": "end",
+            "branch": null
+          },
+          {
+            "id": "t2-end-next",
+            "source": "t2",
+            "target": "end",
+            "branch": null
+          }
+        ]
+      },
+      "codes": ["multiple_triggers", "unreachable_node"]
+    },
+    {
+      "name": "something leads back into the trigger",
+      "definition": {
+        "schemaVersion": 1,
+        "nodes": [
+          {
+            "id": "t",
+            "type": "trigger",
+            "config": {
+              "event": "manual",
+              "subject": "lead"
+            }
+          },
+          {
+            "id": "c",
+            "type": "condition",
+            "config": {
+              "field": "lead.has_contact_email",
+              "op": "is_true"
+            }
+          },
+          {
+            "id": "end",
+            "type": "end",
+            "config": {}
+          }
+        ],
+        "edges": [
+          {
+            "id": "t-c-next",
+            "source": "t",
+            "target": "c",
+            "branch": null
+          },
+          {
+            "id": "c-t-true",
+            "source": "c",
+            "target": "t",
+            "branch": "true"
+          },
+          {
+            "id": "c-end-false",
+            "source": "c",
+            "target": "end",
+            "branch": "false"
+          }
+        ]
+      },
+      "codes": ["cycle", "trigger_has_incoming"]
+    },
+    {
+      "name": "duplicate node ids",
+      "definition": {
+        "schemaVersion": 1,
+        "nodes": [
+          {
+            "id": "t",
+            "type": "trigger",
+            "config": {
+              "event": "manual",
+              "subject": "lead"
+            }
+          },
+          {
+            "id": "t",
+            "type": "trigger",
+            "config": {
+              "event": "manual",
+              "subject": "lead"
+            }
+          },
+          {
+            "id": "end",
+            "type": "end",
+            "config": {}
+          }
+        ],
+        "edges": [
+          {
+            "id": "t-end-next",
+            "source": "t",
+            "target": "end",
+            "branch": null
+          }
+        ]
+      },
+      "codes": ["duplicate_node_id"]
+    },
+    {
+      "name": "duplicate edge ids",
+      "definition": {
+        "schemaVersion": 1,
+        "nodes": [
+          {
+            "id": "t",
+            "type": "trigger",
+            "config": {
+              "event": "manual",
+              "subject": "lead"
+            }
+          },
+          {
+            "id": "end",
+            "type": "end",
+            "config": {}
+          }
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "source": "t",
+            "target": "end",
+            "branch": null
+          },
+          {
+            "id": "e1",
+            "source": "t",
+            "target": "end",
+            "branch": null
+          }
+        ]
+      },
+      "codes": ["duplicate_edge_id"]
+    },
+    {
+      "name": "a connection to a node that does not exist",
+      "definition": {
+        "schemaVersion": 1,
+        "nodes": [
+          {
+            "id": "t",
+            "type": "trigger",
+            "config": {
+              "event": "manual",
+              "subject": "lead"
+            }
+          },
+          {
+            "id": "end",
+            "type": "end",
+            "config": {}
+          }
+        ],
+        "edges": [
+          {
+            "id": "t-ghost-next",
+            "source": "t",
+            "target": "ghost",
+            "branch": null
+          },
+          {
+            "id": "ghost-end-next",
+            "source": "ghost",
+            "target": "end",
+            "branch": null
+          }
+        ]
+      },
+      "codes": ["dangling_edge", "unhandled_branch", "unreachable_node"]
+    },
+    {
+      "name": "an unknown node type",
+      "definition": {
+        "schemaVersion": 1,
+        "nodes": [
+          {
+            "id": "t",
+            "type": "trigger",
+            "config": {
+              "event": "manual",
+              "subject": "lead"
+            }
+          },
+          {
+            "id": "x",
+            "type": "teleport",
+            "config": {}
+          },
+          {
+            "id": "end",
+            "type": "end",
+            "config": {}
+          }
+        ],
+        "edges": [
+          {
+            "id": "t-x-next",
+            "source": "t",
+            "target": "x",
+            "branch": null
+          },
+          {
+            "id": "x-end-next",
+            "source": "x",
+            "target": "end",
+            "branch": null
+          }
+        ]
+      },
+      "codes": ["unknown_node_type"]
+    },
+    {
+      "name": "an output that does not exist",
+      "definition": {
+        "schemaVersion": 1,
+        "nodes": [
+          {
+            "id": "t",
+            "type": "trigger",
+            "config": {
+              "event": "manual",
+              "subject": "lead"
+            }
+          },
+          {
+            "id": "a",
+            "type": "notify",
+            "config": {
+              "title": "x"
+            }
+          },
+          {
+            "id": "end",
+            "type": "end",
+            "config": {}
+          }
+        ],
+        "edges": [
+          {
+            "id": "t-a-yes",
+            "source": "t",
+            "target": "a",
+            "branch": "yes"
+          },
+          {
+            "id": "a-end-next",
+            "source": "a",
+            "target": "end",
+            "branch": null
+          }
+        ]
+      },
+      "codes": ["unhandled_branch", "unknown_port", "unreachable_node"]
+    },
+    {
+      "name": "connections out of an end node",
+      "definition": {
+        "schemaVersion": 1,
+        "nodes": [
+          {
+            "id": "t",
+            "type": "trigger",
+            "config": {
+              "event": "manual",
+              "subject": "lead"
+            }
+          },
+          {
+            "id": "end",
+            "type": "end",
+            "config": {}
+          },
+          {
+            "id": "a",
+            "type": "notify",
+            "config": {
+              "title": "x"
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "t-end-next",
+            "source": "t",
+            "target": "end",
+            "branch": null
+          },
+          {
+            "id": "end-a-next",
+            "source": "end",
+            "target": "a",
+            "branch": null
+          }
+        ]
+      },
+      "codes": ["unhandled_branch", "unknown_port", "unreachable_node"]
+    },
+    {
+      "name": "two connections from one output",
+      "definition": {
+        "schemaVersion": 1,
+        "nodes": [
+          {
+            "id": "t",
+            "type": "trigger",
+            "config": {
+              "event": "manual",
+              "subject": "lead"
+            }
+          },
+          {
+            "id": "a",
+            "type": "notify",
+            "config": {
+              "title": "a"
+            }
+          },
+          {
+            "id": "b",
+            "type": "notify",
+            "config": {
+              "title": "b"
+            }
+          },
+          {
+            "id": "end",
+            "type": "end",
+            "config": {}
+          }
+        ],
+        "edges": [
+          {
+            "id": "t-a-next",
+            "source": "t",
+            "target": "a",
+            "branch": null
+          },
+          {
+            "id": "t-b-next",
+            "source": "t",
+            "target": "b",
+            "branch": null
+          },
+          {
+            "id": "a-end-next",
+            "source": "a",
+            "target": "end",
+            "branch": null
+          },
+          {
+            "id": "b-end-next",
+            "source": "b",
+            "target": "end",
+            "branch": null
+          }
+        ]
+      },
+      "codes": ["ambiguous_branch", "unreachable_node"]
+    },
+    {
+      "name": "a condition with no false branch",
+      "definition": {
+        "schemaVersion": 1,
+        "nodes": [
+          {
+            "id": "t",
+            "type": "trigger",
+            "config": {
+              "event": "manual",
+              "subject": "lead"
+            }
+          },
+          {
+            "id": "c",
+            "type": "condition",
+            "config": {
+              "field": "lead.has_contact_email",
+              "op": "is_true"
+            }
+          },
+          {
+            "id": "end",
+            "type": "end",
+            "config": {}
+          }
+        ],
+        "edges": [
+          {
+            "id": "t-c-next",
+            "source": "t",
+            "target": "c",
+            "branch": null
+          },
+          {
+            "id": "c-end-true",
+            "source": "c",
+            "target": "end",
+            "branch": "true"
+          }
+        ]
+      },
+      "codes": ["unhandled_branch"]
+    },
+    {
+      "name": "a step that leads nowhere",
+      "definition": {
+        "schemaVersion": 1,
+        "nodes": [
+          {
+            "id": "t",
+            "type": "trigger",
+            "config": {
+              "event": "manual",
+              "subject": "lead"
+            }
+          },
+          {
+            "id": "a",
+            "type": "notify",
+            "config": {
+              "title": "x"
+            }
+          },
+          {
+            "id": "end",
+            "type": "end",
+            "config": {}
+          }
+        ],
+        "edges": [
+          {
+            "id": "t-a-next",
+            "source": "t",
+            "target": "a",
+            "branch": null
+          }
+        ]
+      },
+      "codes": ["unhandled_branch", "unreachable_node"]
+    },
+    {
+      "name": "a node nothing leads to",
+      "definition": {
+        "schemaVersion": 1,
+        "nodes": [
+          {
+            "id": "t",
+            "type": "trigger",
+            "config": {
+              "event": "manual",
+              "subject": "lead"
+            }
+          },
+          {
+            "id": "a",
+            "type": "notify",
+            "config": {
+              "title": "x"
+            }
+          },
+          {
+            "id": "lost",
+            "type": "notify",
+            "config": {
+              "title": "y"
+            }
+          },
+          {
+            "id": "end",
+            "type": "end",
+            "config": {}
+          }
+        ],
+        "edges": [
+          {
+            "id": "t-a-next",
+            "source": "t",
+            "target": "a",
+            "branch": null
+          },
+          {
+            "id": "a-end-next",
+            "source": "a",
+            "target": "end",
+            "branch": null
+          },
+          {
+            "id": "lost-end-next",
+            "source": "lost",
+            "target": "end",
+            "branch": null
+          }
+        ]
+      },
+      "codes": ["unreachable_node"]
+    },
+    {
+      "name": "a loop",
+      "definition": {
+        "schemaVersion": 1,
+        "nodes": [
+          {
+            "id": "t",
+            "type": "trigger",
+            "config": {
+              "event": "manual",
+              "subject": "lead"
+            }
+          },
+          {
+            "id": "a",
+            "type": "notify",
+            "config": {
+              "title": "a"
+            }
+          },
+          {
+            "id": "b",
+            "type": "notify",
+            "config": {
+              "title": "b"
+            }
+          },
+          {
+            "id": "end",
+            "type": "end",
+            "config": {}
+          }
+        ],
+        "edges": [
+          {
+            "id": "t-a-next",
+            "source": "t",
+            "target": "a",
+            "branch": null
+          },
+          {
+            "id": "a-b-next",
+            "source": "a",
+            "target": "b",
+            "branch": null
+          },
+          {
+            "id": "b-a-next",
+            "source": "b",
+            "target": "a",
+            "branch": null
+          }
+        ]
+      },
+      "codes": ["cycle", "unreachable_node"]
+    },
+    {
+      "name": "a step that connects to itself",
+      "definition": {
+        "schemaVersion": 1,
+        "nodes": [
+          {
+            "id": "t",
+            "type": "trigger",
+            "config": {
+              "event": "manual",
+              "subject": "lead"
+            }
+          },
+          {
+            "id": "a",
+            "type": "notify",
+            "config": {
+              "title": "a"
+            }
+          },
+          {
+            "id": "end",
+            "type": "end",
+            "config": {}
+          }
+        ],
+        "edges": [
+          {
+            "id": "t-a-next",
+            "source": "t",
+            "target": "a",
+            "branch": null
+          },
+          {
+            "id": "a-a-next",
+            "source": "a",
+            "target": "a",
+            "branch": null
+          }
+        ]
+      },
+      "codes": ["cycle", "unreachable_node"]
+    }
+  ]
+}

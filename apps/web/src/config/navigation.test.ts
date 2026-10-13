@@ -21,9 +21,10 @@ describe("navigation config", () => {
     expect(new Set(NAV_ITEMS.map((i) => i.href)).size).toBe(NAV_ITEMS.length);
   });
 
-  it("only Home is marked available; everything else is honestly planned with a phase", () => {
+  it("only built destinations are marked available; everything else is honestly planned with a phase", () => {
     for (const item of NAV_ITEMS) {
-      if (item.id === "home") expect(item.status).toBe("available");
+      if (["home", "ai", "leads", "inbox", "pipeline", "tasks", "integrations"].includes(item.id))
+        expect(item.status).toBe("available");
       else {
         expect(item.status).toBe("planned");
         expect(item.phase).toBeTruthy();
@@ -47,6 +48,49 @@ describe("navigation config", () => {
     expect(resolveBreadcrumbs("/leads/42")).toEqual([
       { label: "Home", href: "/" },
       { label: "Leads", href: "/leads" },
+    ]);
+  });
+
+  it("adds a third crumb for known sub-pages and not for unknown ones", () => {
+    expect(resolveBreadcrumbs("/ai-workspace/profile")).toEqual([
+      { label: "Home", href: "/" },
+      { label: "AI Workspace", href: "/ai-workspace" },
+      { label: "Profile" },
+    ]);
+    expect(resolveBreadcrumbs("/ai-workspace/nope")).toHaveLength(2);
+  });
+
+  it("labels the lead pages, including detail pages", () => {
+    const id = "11111111-1111-4111-8111-111111111111";
+    expect(resolveBreadcrumbs("/leads/companies")).toEqual([
+      { label: "Home", href: "/" },
+      { label: "Leads", href: "/leads" },
+      { label: "Companies" },
+    ]);
+    expect(resolveBreadcrumbs(`/leads/${id}`)).toEqual([
+      { label: "Home", href: "/" },
+      { label: "Leads", href: "/leads" },
+      { label: "Lead" },
+    ]);
+    expect(resolveBreadcrumbs(`/leads/contacts/${id}`)).toEqual([
+      { label: "Home", href: "/" },
+      { label: "Leads", href: "/leads" },
+      { label: "Contacts", href: "/leads/contacts" },
+      { label: "Contact" },
+    ]);
+    expect(resolveBreadcrumbs("/leads/import").at(-1)).toEqual({ label: "Import" });
+  });
+
+  it("labels deal pages", () => {
+    const id = "11111111-1111-4111-8111-111111111111";
+    expect(resolveBreadcrumbs(`/pipeline/${id}`)).toEqual([
+      { label: "Home", href: "/" },
+      { label: "Pipeline", href: "/pipeline" },
+      { label: "Deal" },
+    ]);
+    expect(resolveBreadcrumbs("/tasks")).toEqual([
+      { label: "Home", href: "/" },
+      { label: "Tasks & Calendar" },
     ]);
   });
 

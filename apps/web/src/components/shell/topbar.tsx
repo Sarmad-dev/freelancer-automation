@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, CircleHelp, Menu, Monitor, Moon, Search, Sun, User } from "lucide-react";
+import { CircleHelp, Menu, Monitor, Moon, Search, Sun, User } from "lucide-react";
 import {
   Breadcrumbs,
   Button,
@@ -21,6 +21,7 @@ import { resolveBreadcrumbs } from "@/config/navigation";
 import { useSession } from "@/components/session-provider";
 import { browserApi } from "@/lib/api-client";
 import { hardNavigate } from "@/lib/navigation";
+import { NotificationBell } from "./notification-bell";
 import { useTheme } from "./theme-provider";
 
 const iconBtn = "text-muted hover:text-fg";
@@ -53,25 +54,6 @@ export function ThemeMenu() {
             <Monitor className="size-4" aria-hidden /> System
           </DropdownMenuRadioItem>
         </DropdownMenuRadioGroup>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
-function NotificationsMenu() {
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label="Notifications" className={iconBtn}>
-          <Bell className="size-4" aria-hidden />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-72 p-4">
-        <p className="text-sm font-medium text-fg">No notifications yet</p>
-        <p className="mt-1 text-[13px] text-muted">
-          Due follow-ups, pending approvals and failed workflow runs will appear here once those
-          features are available.
-        </p>
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -181,7 +163,7 @@ export function Topbar({
       </button>
 
       <div className="flex items-center">
-        <NotificationsMenu />
+        <NotificationBell />
         <HelpMenu />
         <ThemeMenu />
         <ProfileMenu />

@@ -3,6 +3,19 @@ import { isPublicPath } from "./auth-constants";
 import { buildUpstreamPath, pickRequestHeaders, pickResponseHeaders } from "./api-proxy";
 
 describe("buildUpstreamPath", () => {
+  it("opens exactly one email route: the OAuth callback", () => {
+    expect(buildUpstreamPath(["email", "oauth", "callback"])).toBe("/api/v1/email/oauth/callback");
+    for (const segments of [
+      ["email"],
+      ["email", "oauth"],
+      ["email", "oauth", "callback", "x"],
+      ["email", "accounts"],
+      ["email", "oauth", "other"],
+    ]) {
+      expect(buildUpstreamPath(segments)).toBeNull();
+    }
+  });
+
   it("allows only the auth and workspaces API areas", () => {
     expect(buildUpstreamPath(["auth", "me"])).toBe("/api/v1/auth/me");
     expect(buildUpstreamPath(["workspaces", "abc", "onboarding", "step"])).toBe(
@@ -55,6 +68,7 @@ describe("header filtering", () => {
     const upstream = new Headers({
       "content-type": "application/json",
       "retry-after": "30",
+      "content-disposition": 'attachment; filename="leads.csv"',
       "x-powered-by": "x",
     });
     upstream.append("set-cookie", "a=1; Path=/; HttpOnly");
@@ -63,6 +77,7 @@ describe("header filtering", () => {
     expect(out.getSetCookie()).toEqual(["a=1; Path=/; HttpOnly", "b=2; Path=/; HttpOnly"]);
     expect(out.get("cache-control")).toBe("no-store");
     expect(out.get("retry-after")).toBe("30");
+    expect(out.get("content-disposition")).toBe('attachment; filename="leads.csv"');
     expect(out.has("x-powered-by")).toBe(false);
   });
 });
@@ -85,4 +100,30 @@ describe("isPublicPath", () => {
     "/design-system",
     "/api/other",
   ])("%s requires a session", (p) => expect(isPublicPath(p)).toBe(false));
+});
+
+describe("redirects from the API", () => {
+  it.each(["/integrations?email=connected", "/integrations?email=error&reason=denied"])(
+    "passes on a path on this site: %s",
+    (location) => {
+      expect(pickResponseHeaders(new Headers({ location })).get("location")).toBe(location);
+    },
+  );
+
+  it.each([
+    "https://evil.example/steal",
+    "//evil.example/steal",
+    "/\\evil.example",
+    "javascript:alert(1)",
+    "integrations",
+    "/ok\r\nSet-Cookie: x=y",
+  ])("never passes on %j", (location) => {
+    let headers: Headers;
+    try {
+      headers = new Headers({ location });
+    } catch {
+      return; // the platform itself refuses a header like this
+    }
+    expect(pickResponseHeaders(headers).get("location")).toBeNull();
+  });
 });

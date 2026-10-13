@@ -11,6 +11,7 @@ import { EmptyState, ErrorState, Notice, PermissionDeniedState } from "./states"
 import { FilterChips, Pagination, TableToolbar } from "./table";
 import { ToastProvider, useToast } from "./toast";
 import { Badge } from "./badge";
+import { Switch } from "./switch";
 import { PageHeader, Breadcrumbs } from "./page";
 
 describe("Field", () => {
@@ -241,5 +242,26 @@ describe("axe: composed screens have no structural a11y violations", () => {
     const dialog = screen.getByRole("dialog");
     expect(within(dialog).getByRole("button", { name: "Close" })).toBeInTheDocument();
     expect(await axeViolations(dialog)).toEqual([]);
+  });
+});
+
+describe("Switch", () => {
+  it("is a named switch that toggles with click and keyboard, and respects disabled", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    const { container, rerender } = render(
+      <Switch checked={false} onCheckedChange={onChange} label="Use in drafts" />,
+    );
+    const sw = screen.getByRole("switch", { name: "Use in drafts" });
+    expect(sw).toHaveAttribute("aria-checked", "false");
+    await user.click(sw);
+    expect(onChange).toHaveBeenLastCalledWith(true);
+    sw.focus();
+    await user.keyboard(" ");
+    expect(onChange).toHaveBeenCalledTimes(2);
+    expect(await axeViolations(container)).toEqual([]);
+    rerender(<Switch checked onCheckedChange={onChange} label="Use in drafts" disabled />);
+    expect(screen.getByRole("switch")).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("switch")).toBeDisabled();
   });
 });

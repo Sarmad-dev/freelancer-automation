@@ -4,7 +4,7 @@ AI-assisted CRM and visual workflow automation for independent freelancers (work
 Blueprint and build prompts: [`freelancer_os_build_prompt_playbook.md`](freelancer_os_build_prompt_playbook.md).
 Project docs: [`docs/`](docs).
 
-> Status: MVP Prompts 1-3 done (scaffold, design system/app shell, authentication + onboarding).
+> Status: MVP Prompts 1-4 done (scaffold, design system/app shell, authentication + onboarding, data model).
 > Everything else in the app is a clearly-marked placeholder.
 
 ## Prerequisites
@@ -20,7 +20,7 @@ pnpm install
 
 pnpm db:up                     # PostgreSQL + Redis via Docker Compose
 pnpm db:migrate                # apply migrations to an empty database
-pnpm db:seed                   # optional, idempotent dev seed
+pnpm db:seed                   # optional, idempotent: fictional demo freelancer + sample data
 
 pnpm dev:api                   # http://localhost:8000  (docs at /docs)
 pnpm dev                       # http://localhost:3000  (second terminal)
@@ -29,8 +29,10 @@ Verify: `curl localhost:8000/health`, `curl localhost:8000/ready`, `curl localho
 http://localhost:3000 — the page should report API connectivity as **Connected**.
 
 ## Authentication (development)
-Sign up at http://localhost:3000/sign-up (creates your personal workspace, then the onboarding wizard).
-There are **no seeded users or default credentials**. Password reset works in development without email:
+Sign up at http://localhost:3000/sign-up (creates your personal workspace, then the onboarding wizard), or run
+`pnpm db:seed` and sign in as the fictional demo account `demo@freelancer-os.example` with the **development-only**
+password `demo passphrase 2026`. The seed refuses to run unless `APP_ENV` is `development` or `test`, and every
+company, contact and address in it uses reserved `.example` names. Real deployments have no seeded users. Password reset works in development without email:
 the API (`MAIL_BACKEND=console`) prints the reset link to its log. In production password reset is
 disabled until a mail provider exists. See [docs/SECURITY.md](docs/SECURITY.md) for how sessions, CSRF,
 rate limiting and workspace isolation work, and the known gaps.
@@ -39,6 +41,31 @@ Production checklist for auth: `APP_ENV=production`, a random `APP_SECRET_KEY`, 
 and `__Host-` prefixed), `RATE_LIMIT_BACKEND=redis`, `CORS_ALLOWED_ORIGINS` set to the exact web origin(s)
 (it doubles as the CSRF origin allow-list), and `TRUSTED_PROXY_COUNT` matching your proxy chain. The API
 refuses to start in production with insecure values.
+
+## AI
+AI runs through a replaceable provider layer ([docs/AI.md](docs/AI.md)). By default (development) it is a **rule-based demo stand-in**,
+clearly labelled, so everything works without credentials. To use a real model set `AI_PROVIDER=gateway` plus `AI_BASE_URL`,
+`AI_API_KEY` and `AI_MODEL` in the API's environment (server-side only). `cd apps/api && uv run python -m app.cli ai-eval` runs
+the evaluation set against whichever provider is configured. In production AI is off unless configured.
+
+## Email
+Open **Integrations** to add the **demo mailbox** (fictional data; nothing is ever delivered) and sync it. Connecting Gmail needs Google OAuth
+credentials in the API's environment (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`) and is **not verified against a real account**; the exact
+setup steps and the end-to-end check to run are in [docs/EMAIL.md](docs/EMAIL.md). Sending always requires an approved draft, an
+idempotency key and a recipient who is not on the do-not-contact list.
+
+## Leads (no outside lead source needed)
+Add leads by hand at `/leads` (a title is enough), or import a CSV at `/leads/import` (upload, map columns, preview, choose how
+to treat duplicates, import, download the error report). The demo workspace ships with clearly labelled **Sample** leads. Fit
+scores come from criteria you set at `/leads/scoring`: rule-based, explained criterion by criterion, never from AI, and shown as
+"not enough information" when the data isn't there. Imports and exports are owner-only; exported CSVs neutralise spreadsheet
+formulas. Nothing is scraped or fetched: only data you type or upload is used.
+
+## Pipeline and tasks
+`/pipeline` is a board and a table of your deals (create them from a lead). Drag a card to another stage, or use its "Move to…" menu
+(keyboard and screen-reader friendly); winning or losing asks you to confirm and, for a loss, why. `/tasks` shows what is overdue,
+due today, upcoming or undated in the time zone you choose; due times mean that zone's clock even across daylight-saving changes.
+The bell in the top bar shows reminders and due tasks. Calendar sync is not connected, so no calendar events are shown.
 
 ## Scripts
 | Command | Purpose |
@@ -68,6 +95,11 @@ TEST_DATABASE_URL=postgresql://freelancer:freelancer@localhost:5432/freelancer_o
 ## Secrets
 No secrets are committed. `.env` is git-ignored; `.env.example` contains names and safe placeholders only.
 Production requires a random `APP_SECRET_KEY` (the API refuses to start otherwise).
+
+## Data model and API conventions
+- [docs/DATA_MODEL.md](docs/DATA_MODEL.md): entities, tenancy rules, retention/deletion, migration rollback, evolution path.
+- [docs/API_CONVENTIONS.md](docs/API_CONVENTIONS.md): URLs, errors, pagination/sorting/filtering, writes, adding a resource.
+- Browse the live API at http://localhost:8000/docs (development).
 
 ## Layout
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).

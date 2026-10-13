@@ -14,7 +14,45 @@ from app.db.models import AuditEvent
 
 # Keys permitted in AuditEvent.details. Anything else is dropped, so a careless caller cannot leak data.
 ALLOWED_DETAIL_KEYS = frozenset(
-    {"reason", "step", "status", "demo_mode", "email_hash", "missing_steps", "sessions_revoked"}
+    {
+        "reason",
+        "step",
+        "status",
+        "demo_mode",
+        "email_hash",
+        "missing_steps",
+        "sessions_revoked",
+        # Field names / counts / versions only, never values (MVP Prompt 5).
+        "fields",
+        "version",
+        "count",
+        "kind",
+        # Counts and modes only (MVP Prompt 6).
+        "created",
+        "updated",
+        "skipped",
+        "errors",
+        "strategy",
+        # Stage keys and task-view names are fixed vocabulary, not user content (MVP Prompt 7).
+        "from",
+        "to",
+        "view",
+        # Fixed vocabulary for email accounts and sending (MVP Prompt 9): provider keys, states, counts. Never addresses
+        # or content.
+        "provider",
+        "state",
+        "messages",
+        "conversations",
+        # Workflow engine (MVP Prompt 11): ids, node types, states and error categories. Never content.
+        "workflow_id",
+        "run_id",
+        "node",
+        "node_type",
+        "mode",
+        "category",
+        "decision",
+        "trigger",
+    }
 )
 
 

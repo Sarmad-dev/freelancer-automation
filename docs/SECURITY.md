@@ -96,6 +96,15 @@ membership, but the schema supports many workspaces per user and many users per 
 - Tests: `tests/test_onboarding.py::TestWorkspaceIsolation` (read/write/skip/complete/demo with a second
   real user, indistinguishable 404s, per-workspace profile storage).
 
+## Secrets at rest (credential store)
+
+OAuth tokens and API keys never appear in general tables (a schema test fails if a column even looks like one).
+They are stored via `app/security/credentials.py`: Fernet authenticated encryption, per-row `key_id` for rotation, the
+`workspace_id`/`purpose` sealed inside the ciphertext and verified on read, reads scoped by workspace. Keys come from
+`CREDENTIAL_ENCRYPTION_KEYS` (required in production; dev falls back to an ephemeral key and logs a warning). Details and
+rotation steps: [DATA_MODEL.md](DATA_MODEL.md#credentials). Known gap: keys live in the process environment; a KMS-backed
+store is the production hardening step.
+
 ## Audit trail
 
 `audit_events` rows are written in the same transaction as the change: `auth.sign_up`, `auth.sign_in`,
@@ -111,6 +120,25 @@ All input is validated by Pydantic at the API boundary (types, lengths, enums, I
 characters, whitespace normalisation, `extra="forbid"` on onboarding bodies). Portfolio URLs must be public
 `http(s)` URLs without credentials; localhost, `.local/.internal`, and non-global IPs are rejected so a future
 fetcher cannot be pointed at internal addresses. Text is stored verbatim and must always be rendered as text.
+Zero-width/bidi-control characters are stripped (D29). Knowledge `source_ref` accepts only a public `http(s)` URL or a
+plain label (`javascript:`, `data:` and any `scheme://` are refused). Knowledge and profile writes are owner-only; members
+get read access. Audit details for these actions are limited to field *names*, counts, kinds and versions, never content.
+
+## CSV import and export
+Imports accept only data in the file the user chose; nothing is fetched. Files are size/row/column limited, parsed strictly (a malformed quote is an error, not silently swallowed data) and every cell is validated like the equivalent form field (email, public website, phone, lengths, control and invisible characters). Preview and import are owner-only. The raw file is never stored; the import record keeps counts and a capped list of row problems, and its audit event only carries counts. Exports and error reports are owner-only, audited by count, capped, served with `no-store`/`nosniff`, and neutralise spreadsheet formulas in every cell. Do-not-contact is derived from the suppression list and is shown on leads and contacts and in imports; nothing in this phase sends email.
+
+## Pipeline, tasks and notifications
+Deal and task writes are owner-only and workspace-scoped (stages, leads, deals and conversations a request refers to must belong to the workspace; the database also refuses cross-tenant links). Audit events for stage moves carry only the destination stage key; task events carry no titles or descriptions. Notifications are per user: another member of the same workspace cannot read or mark them, and notification links are relative paths only (validated on the server and again in the browser). Task creation is idempotent by key so retries cannot duplicate records.
+
+## AI calls
+Details in [AI.md](AI.md). The provider key lives only in the server environment (`SecretStr`, never logged, never returned by the status endpoint, never in an error message); production refuses the demo provider, a non-https gateway URL and URLs with embedded credentials; redirects from the gateway are not followed. Emails, imports, documents and notes are untrusted: personal data is removed, text is fenced, replies are validated and nothing a model says is executed. Prompts, emails and replies are never stored or logged; usage rows and log lines carry metadata only. Context is workspace-scoped and built from approved facts only; drafting never receives pricing guidance or excluded-customer notes. Calls are rate-limited per workspace before the provider is contacted.
+
+## Email connections and sending
+Details in [EMAIL.md](EMAIL.md). Provider tokens exist only in the encrypted credential store (never in responses, logs, the audit trail or the browser); the OAuth `state` is single-use, expiring and bound to the signed-in owner, PKCE protects the code exchange, a grant missing a required permission is refused, and the access log redacts the callback query. The web proxy opens exactly one `email` route (the callback) and passes on a redirect only if it is a path on this site. Revoked grants stop all provider calls until reconnected; disconnect always deletes our copy of the credentials. A send requires an approved draft whose text is unchanged since approval, an idempotency key, a recipient not on the suppression list and a usable mailbox within send limits, and is recorded before the provider is called; ambiguous results are never retried automatically. Header injection is prevented by single-line subjects, address validation and the standard library's header guard. Audit events carry provider, state and reason codes only.
+
+Inbox (details in [INBOX.md](INBOX.md)): incoming mail is untrusted. Bodies are rebuilt by an allow-list sanitiser, images and remote content are removed (reading mail never contacts a third party), HTML renders only in a sandboxed iframe with a restrictive CSP, and attachments are metadata only. Message text reaches a model only after minimisation and fencing, and model output must quote evidence that really appears in the message. Only a deterministic opt-out rule (never the model alone) suppresses a sender automatically; suppression is enforced again server-side at send time. Suggested replies are drafts that a person must approve. Message text never appears in logs or audit events, and an owner can delete synced mail.
+
+Workflows (details in [WORKFLOWS.md](WORKFLOWS.md)): a workflow can only send email after a person approved exactly that draft in the same run (proved by the validator and checked again by the engine), and only the owner decides approvals. Runs start in test mode, where record changes and sending are simulated; going live needs an explicit, audited confirmation. The engine never stores message text, addresses or exception text in run records, step logs or audit events, only ids, counts, enumerations and fixed error categories. Templates can only use four allow-listed placeholders. Everything is workspace-scoped, and workspace limits (workflows, runs in progress, runs per day) apply.
 
 ## Known gaps (tracked)
 

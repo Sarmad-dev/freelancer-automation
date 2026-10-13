@@ -1,0 +1,339 @@
+"""Email, outreach and integration metadata.
+
+Secrets: OAuth tokens and API keys NEVER live in these general-purpose tables. ``EmailAccount`` and
+``IntegrationConnection`` hold only a ``credential_id`` pointing into ``credential_secrets``, whose payload
+is encrypted at rest by ``app.security.credentials``. Message bodies are not stored in the MVP schema
+(only metadata and a short snippet); a body/retention decision is part of MVP Prompt 10.
+"""
+
+from __future__ import annotations
+
+import uuid
+from datetime import datetime
+from typing import Any
+
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    LargeBinary,
+    String,
+    Text,
+    UniqueConstraint,
+    Uuid,
+)
+from sqlalchemy.orm import Mapped, mapped_column
+
+from app import domain
+from app.clock import utcnow
+from app.db.base import Base
+from app.db.mixins import TenantMixin, Timestamps, check_in, pk_column, tenant_fk
+
+
+class CredentialSecret(TenantMixin, Base):
+    """Encrypted credential material (OAuth tokens, API keys). The only table allowed to hold secrets."""
+
+    __tablename__ = "credential_secrets"
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "id", name="uq_credential_secrets_workspace_id_id"),
+    )
+
+    id: Mapped[uuid.UUID] = pk_column()
+    purpose: Mapped[str] = mapped_column(String(60), nullable=False)
+    # Authenticated encryption (Fernet); never plaintext. ``key_id`` supports key rotation.
+    ciphertext: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    key_id: Mapped[str] = mapped_column(String(20), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=utcnow
+    )
+    rotated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class EmailAccount(TenantMixin, Timestamps, Base):
+    __tablename__ = "email_accounts"
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "id", name="uq_email_accounts_workspace_id_id"),
+        # One row per connected mailbox: a provider account id can only be linked once per workspace.
+        UniqueConstraint(
+            "workspace_id",
+            "provider",
+            "provider_account_id",
+            name="uq_email_accounts_provider_account",
+        ),
+        check_in("provider", domain.PROVIDERS),
+        check_in("status", domain.CONNECTION_STATUSES),
+        tenant_fk("email_accounts", "credential_id", "credential_secrets"),
+    )
+
+    id: Mapped[uuid.UUID] = pk_column()
+    provider: Mapped[str] = mapped_column(String(20), nullable=False)
+    provider_account_id: Mapped[str] = mapped_column(String(200), nullable=False)
+    email_address: Mapped[str] = mapped_column(String(254), nullable=False)
+    display_name: Mapped[str | None] = mapped_column(String(120))
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="disconnected")
+    is_demo: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    credential_id: Mapped[uuid.UUID | None] = mapped_column(Uuid)
+    granted_scopes: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    # Provider sync cursor (e.g. Gmail historyId). Opaque and non-secret.
+    sync_cursor: Mapped[str | None] = mapped_column(String(500))
+    last_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_error_code: Mapped[str | None] = mapped_column(String(60))
+    # Last time a REAL connection test (or sync) reached the provider and succeeded / failed.
+    last_health_check_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # The provider asked us to back off until this instant; no calls are made before it.
+    rate_limited_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class Conversation(TenantMixin, Timestamps, Base):
+    __tablename__ = "conversations"
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "id", name="uq_conversations_workspace_id_id"),
+        UniqueConstraint(
+            "email_account_id", "provider_thread_id", name="uq_conversations_account_thread"
+        ),
+        check_in("status", domain.CONVERSATION_STATUSES),
+        CheckConstraint(
+            "classification IS NULL OR classification IN ("
+            + ", ".join(f"'{c}'" for c in domain.REPLY_CATEGORIES)
+            + ")",
+            name="classification_valid",
+        ),
+        CheckConstraint(
+            "classification_confidence IS NULL OR (classification_confidence >= 0 AND classification_confidence <= 1)",
+            name="confidence_range",
+        ),
+        CheckConstraint(
+            "review_reason IS NULL OR review_reason IN ("
+            + ", ".join(f"'{r}'" for r in domain.REVIEW_REASONS)
+            + ")",
+            name="review_reason_valid",
+        ),
+        CheckConstraint(
+            "classification_source IS NULL OR classification_source IN ("
+            + ", ".join(f"'{r}'" for r in domain.CLASSIFICATION_SOURCES)
+            + ")",
+            name="classification_source_valid",
+        ),
+        tenant_fk("conversations", "email_account_id", "email_accounts", ondelete="CASCADE"),
+        tenant_fk("conversations", "lead_id", "leads"),
+        tenant_fk("conversations", "contact_id", "contacts"),
+        Index("ix_conversations_workspace_last_message", "workspace_id", "last_message_at"),
+        Index("ix_conversations_workspace_lead", "workspace_id", "lead_id"),
+    )
+
+    id: Mapped[uuid.UUID] = pk_column()
+    email_account_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    provider_thread_id: Mapped[str] = mapped_column(String(200), nullable=False)
+    subject: Mapped[str | None] = mapped_column(String(500))
+    lead_id: Mapped[uuid.UUID | None] = mapped_column(Uuid)
+    contact_id: Mapped[uuid.UUID | None] = mapped_column(Uuid)
+    status: Mapped[str] = mapped_column(String(10), nullable=False, default="open")
+    unread: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    last_message_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    classification: Mapped[str | None] = mapped_column(String(20))
+    classification_confidence: Mapped[float | None] = mapped_column(Float)
+    classification_explanation: Mapped[str | None] = mapped_column(String(1000))
+    # Where the classification came from and whether a person must look at it (MVP Prompt 10).
+    classification_source: Mapped[str | None] = mapped_column(String(20))
+    classification_evidence: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    # The inbound message the classification describes (no foreign key: it is a pointer, not ownership).
+    classified_message_id: Mapped[uuid.UUID | None] = mapped_column(Uuid)
+    classified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    needs_review: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    review_reason: Mapped[str | None] = mapped_column(String(30))
+    is_sample: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+
+class Message(TenantMixin, Base):
+    """Message metadata. No body column by design (see module docstring)."""
+
+    __tablename__ = "messages"
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "id", name="uq_messages_workspace_id_id"),
+        # Idempotent sync: re-fetching the same provider message upserts instead of duplicating.
+        UniqueConstraint(
+            "email_account_id", "provider_message_id", name="uq_messages_account_provider_message"
+        ),
+        check_in("direction", domain.MESSAGE_DIRECTIONS),
+        check_in("delivery_state", domain.MESSAGE_DELIVERY_STATES),
+        tenant_fk("messages", "email_account_id", "email_accounts", ondelete="CASCADE"),
+        tenant_fk("messages", "conversation_id", "conversations", ondelete="CASCADE"),
+        tenant_fk("messages", "draft_id", "drafts"),
+        # One message per approved draft: a retried send updates this row and can never add a second.
+        UniqueConstraint("workspace_id", "draft_id", name="uq_messages_workspace_draft"),
+        Index(
+            "ix_messages_workspace_conversation_sent", "workspace_id", "conversation_id", "sent_at"
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = pk_column()
+    email_account_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    conversation_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    provider_message_id: Mapped[str] = mapped_column(String(200), nullable=False)
+    direction: Mapped[str] = mapped_column(String(10), nullable=False)
+    delivery_state: Mapped[str] = mapped_column(String(10), nullable=False, default="unknown")
+    from_address: Mapped[str] = mapped_column(String(254), nullable=False)
+    to_addresses: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    subject: Mapped[str | None] = mapped_column(String(500))
+    snippet: Mapped[str | None] = mapped_column(String(500))
+    attachments: Mapped[list[dict[str, Any]]] = mapped_column(JSON, nullable=False, default=list)
+    draft_id: Mapped[uuid.UUID | None] = mapped_column(Uuid)
+    # A delivery-failure notice from the mail system (not a person's reply).
+    is_bounce: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # Why a delivery failed or is unknown ("rate_limited", "timeout", ...). A code, never a message.
+    delivery_error_code: Mapped[str | None] = mapped_column(String(60))
+    sent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=utcnow
+    )
+    is_sample: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+
+class MessageBody(TenantMixin, Base):
+    """The stored text of a message, kept apart from its metadata so retention can be decided (and enforced) separately.
+
+    ``body_html`` is ALWAYS the sanitised form (``app.mailbox.sanitize``); the original HTML is never stored. Deleting a
+    message, a mailbox's synced mail or the workspace removes the body with it.
+    """
+
+    __tablename__ = "message_bodies"
+    __table_args__ = (
+        UniqueConstraint("message_id", name="uq_message_bodies_message"),
+        tenant_fk("message_bodies", "message_id", "messages", ondelete="CASCADE"),
+    )
+
+    id: Mapped[uuid.UUID] = pk_column()
+    message_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    body_text: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    body_html: Mapped[str | None] = mapped_column(Text)
+    text_truncated: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    images_blocked: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    sanitizer_version: Mapped[str | None] = mapped_column(String(10))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=utcnow
+    )
+
+
+class EmailJob(TenantMixin, Timestamps, Base):
+    """Background work on one message (classification). One row per (message, kind), so enqueueing twice is harmless."""
+
+    __tablename__ = "email_jobs"
+    __table_args__ = (
+        UniqueConstraint("message_id", "kind", name="uq_email_jobs_message_kind"),
+        check_in("kind", domain.EMAIL_JOB_KINDS),
+        check_in("status", domain.EMAIL_JOB_STATUSES),
+        CheckConstraint("attempts >= 0 AND max_attempts >= 1", name="attempts_valid"),
+        tenant_fk("email_jobs", "conversation_id", "conversations", ondelete="CASCADE"),
+        tenant_fk("email_jobs", "message_id", "messages", ondelete="CASCADE"),
+        Index("ix_email_jobs_status_run_after", "status", "run_after"),
+    )
+
+    id: Mapped[uuid.UUID] = pk_column()
+    kind: Mapped[str] = mapped_column(String(20), nullable=False, default="classify")
+    conversation_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    message_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    status: Mapped[str] = mapped_column(String(10), nullable=False, default="queued")
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    max_attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=3)
+    run_after: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=utcnow
+    )
+    # A worker holds the job until this instant; a crashed worker's job becomes claimable again afterwards.
+    locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_error_code: Mapped[str | None] = mapped_column(String(40))
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class Draft(TenantMixin, Timestamps, Base):
+    """An outbound message awaiting review. Approval binds to ``content_hash`` so edits require re-approval."""
+
+    __tablename__ = "drafts"
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "id", name="uq_drafts_workspace_id_id"),
+        UniqueConstraint(
+            "workspace_id", "send_idempotency_key", name="uq_drafts_workspace_send_key"
+        ),
+        check_in("status", domain.DRAFT_STATUSES),
+        check_in("author", domain.DRAFT_AUTHORS),
+        CheckConstraint("version >= 1", name="version_positive"),
+        tenant_fk("drafts", "lead_id", "leads", ondelete="CASCADE"),
+        tenant_fk("drafts", "conversation_id", "conversations", ondelete="CASCADE"),
+        tenant_fk("drafts", "email_account_id", "email_accounts"),
+        Index("ix_drafts_workspace_status", "workspace_id", "status"),
+        Index("ix_drafts_workspace_lead", "workspace_id", "lead_id"),
+    )
+
+    id: Mapped[uuid.UUID] = pk_column()
+    lead_id: Mapped[uuid.UUID | None] = mapped_column(Uuid)
+    conversation_id: Mapped[uuid.UUID | None] = mapped_column(Uuid)
+    email_account_id: Mapped[uuid.UUID | None] = mapped_column(Uuid)
+    to_address: Mapped[str | None] = mapped_column(String(254))
+    subject: Mapped[str] = mapped_column(String(500), nullable=False, default="")
+    body_text: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="draft")
+    author: Mapped[str] = mapped_column(String(10), nullable=False, default="user")
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    content_hash: Mapped[str | None] = mapped_column(String(64))
+    approved_content_hash: Mapped[str | None] = mapped_column(String(64))
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    approved_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="SET NULL")
+    )
+    # Which approved knowledge items informed an AI draft (ids only; shown in the review UI).
+    facts_used: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    send_idempotency_key: Mapped[str | None] = mapped_column(String(100))
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    is_sample: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+
+class SuppressionEntry(TenantMixin, Timestamps, Base):
+    """Do-not-contact list. Checked server-side at every send path."""
+
+    __tablename__ = "suppression_entries"
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "email_normalized", name="uq_suppression_workspace_email"),
+        check_in("reason", domain.SUPPRESSION_REASONS),
+    )
+
+    id: Mapped[uuid.UUID] = pk_column()
+    email_normalized: Mapped[str] = mapped_column(String(254), nullable=False)
+    reason: Mapped[str] = mapped_column(String(20), nullable=False)
+    source: Mapped[str | None] = mapped_column(String(100))
+    note: Mapped[str | None] = mapped_column(String(300))
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="SET NULL")
+    )
+
+
+class IntegrationConnection(TenantMixin, Timestamps, Base):
+    __tablename__ = "integration_connections"
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "id", name="uq_integration_connections_workspace_id_id"),
+        UniqueConstraint(
+            "workspace_id",
+            "connector",
+            "external_account_id",
+            name="uq_integration_connections_account",
+        ),
+        check_in("status", domain.CONNECTION_STATUSES),
+        tenant_fk("integration_connections", "credential_id", "credential_secrets"),
+        Index("ix_integration_connections_workspace_connector", "workspace_id", "connector"),
+    )
+
+    id: Mapped[uuid.UUID] = pk_column()
+    connector: Mapped[str] = mapped_column(String(40), nullable=False)
+    external_account_id: Mapped[str] = mapped_column(String(200), nullable=False)
+    display_name: Mapped[str | None] = mapped_column(String(120))
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="disconnected")
+    credential_id: Mapped[uuid.UUID | None] = mapped_column(Uuid)
+    granted_scopes: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    capabilities: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    # Non-secret settings only. Anything sensitive goes through the credential store.
+    config: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
+    last_health_check_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_error_code: Mapped[str | None] = mapped_column(String(60))

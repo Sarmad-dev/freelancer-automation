@@ -10,7 +10,7 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field, ValidationError, field_validator, model_validator
+from pydantic import Field, SecretStr, ValidationError, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _INSECURE_SECRETS = {"", "change-me", "changeme", "secret", "replace-me"}
@@ -54,8 +54,67 @@ class Settings(BaseSettings):
     rate_limit_backend: Literal["memory", "redis"] | None = Field(
         default=None, alias="RATE_LIMIT_BACKEND"
     )
+    # Fernet keys for the credential store as "id:key[,id:key...]"; the FIRST entry encrypts new secrets and
+    # older ones stay readable (rotation). Required in production; dev/test fall back to an ephemeral key.
+    # Generate: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+    credential_encryption_keys: str = Field(default="", alias="CREDENTIAL_ENCRYPTION_KEYS")
     # "console" prints reset links (development only). "disabled" turns password reset off.
     mail_backend: Literal["console", "disabled"] | None = Field(default=None, alias="MAIL_BACKEND")
+
+    # --- AI provider (MVP Prompt 8). Server-side only; the key never reaches the browser or the logs. ---
+    # mock = rule-based stand-in that labels everything it produces (dev/test default);
+    # gateway = an OpenAI-compatible chat-completions endpoint; disabled = AI features report "unavailable".
+    ai_provider: Literal["mock", "gateway", "disabled"] | None = Field(
+        default=None, alias="AI_PROVIDER"
+    )
+    ai_base_url: str = Field(default="", alias="AI_BASE_URL")
+    ai_api_key: SecretStr = Field(default=SecretStr(""), alias="AI_API_KEY")
+    # One model for everything, optionally a cheaper/faster one for classification, extraction and summaries.
+    ai_model: str = Field(default="", alias="AI_MODEL")
+    ai_model_fast: str = Field(default="", alias="AI_MODEL_FAST")
+    ai_timeout_seconds: float = Field(default=20.0, gt=0, le=120, alias="AI_TIMEOUT_SECONDS")
+    # Attempts per call (first try included) and the wall-clock budget across all of them.
+    ai_max_attempts: int = Field(default=2, ge=1, le=4, alias="AI_MAX_ATTEMPTS")
+    ai_total_budget_seconds: float = Field(
+        default=45.0, gt=0, le=300, alias="AI_TOTAL_BUDGET_SECONDS"
+    )
+    # Model calls allowed per workspace per minute.
+    ai_rate_limit_per_minute: int = Field(
+        default=30, ge=1, le=10_000, alias="AI_RATE_LIMIT_PER_MINUTE"
+    )
+    # Optional price list used only to ESTIMATE cost (millionths of a currency unit per 1,000 tokens).
+    ai_input_cost_micros_per_1k: int | None = Field(
+        default=None, ge=0, alias="AI_INPUT_COST_MICROS_PER_1K"
+    )
+    ai_output_cost_micros_per_1k: int | None = Field(
+        default=None, ge=0, alias="AI_OUTPUT_COST_MICROS_PER_1K"
+    )
+
+    # --- Email providers (MVP Prompt 9). Gmail is "configured" only when both the client id and secret are set. ---
+    google_client_id: str = Field(default="", alias="GOOGLE_CLIENT_ID")
+    google_client_secret: SecretStr = Field(default=SecretStr(""), alias="GOOGLE_CLIENT_SECRET")
+    # Must match an "Authorized redirect URI" of the Google OAuth client exactly. Default: the web app's proxy path.
+    google_redirect_uri: str = Field(default="", alias="GOOGLE_REDIRECT_URI")
+    email_http_timeout_seconds: float = Field(
+        default=15.0, gt=0, le=60, alias="EMAIL_HTTP_TIMEOUT_SECONDS"
+    )
+    # Pages of threads fetched per sync run (the rest continues on the next run).
+    email_sync_max_pages: int = Field(default=5, ge=1, le=50, alias="EMAIL_SYNC_MAX_PAGES")
+    # Approved messages one workspace may send per hour / per day (a safety limit on top of the provider's own).
+    email_send_limit_per_hour: int = Field(
+        default=20, ge=1, le=10_000, alias="EMAIL_SEND_LIMIT_PER_HOUR"
+    )
+    email_send_limit_per_day: int = Field(
+        default=100, ge=1, le=100_000, alias="EMAIL_SEND_LIMIT_PER_DAY"
+    )
+    # Workflow engine limits, per workspace (MVP Prompt 11).
+    workflow_max_workflows: int = Field(default=25, ge=1, le=1_000, alias="WORKFLOW_MAX_WORKFLOWS")
+    workflow_max_active_runs: int = Field(
+        default=50, ge=1, le=10_000, alias="WORKFLOW_MAX_ACTIVE_RUNS"
+    )
+    workflow_max_runs_per_day: int = Field(
+        default=500, ge=1, le=1_000_000, alias="WORKFLOW_MAX_RUNS_PER_DAY"
+    )
 
     @field_validator("database_url")
     @classmethod
@@ -92,11 +151,65 @@ class Settings(BaseSettings):
                 raise ValueError("COOKIE_SECURE must not be false in production")
             if self.effective_mail_backend == "console":
                 raise ValueError("MAIL_BACKEND=console is for development only")
+            if not self.credential_encryption_keys.strip():
+                raise ValueError(
+                    "CREDENTIAL_ENCRYPTION_KEYS must be set in production (format 'v1:<fernet key>'; "
+                    'generate with: python -c "from cryptography.fernet import Fernet; '
+                    'print(Fernet.generate_key().decode())")'
+                )
+            if self.effective_ai_provider == "mock":
+                raise ValueError(
+                    "AI_PROVIDER=mock is for development only (its output is not written by a model); "
+                    "use gateway or disabled"
+                )
             if self.effective_rate_limit_backend == "memory":
                 raise ValueError(
                     "RATE_LIMIT_BACKEND=memory is not allowed in production (use redis)"
                 )
+        if bool(self.google_client_id.strip()) != bool(
+            self.google_client_secret.get_secret_value()
+        ):
+            raise ValueError("GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be set together")
+        if self.google_redirect_uri and not self.google_redirect_uri.startswith(
+            ("https://", "http://")
+        ):
+            raise ValueError("GOOGLE_REDIRECT_URI must be an http(s) URL")
+        if (
+            self.app_env == "production"
+            and self.google_client_id
+            and not self.effective_google_redirect_uri.startswith("https://")
+        ):
+            raise ValueError("The Google redirect URI must use https in production")
+        if self.effective_ai_provider == "gateway":
+            problems = []
+            if not self.ai_base_url.startswith(("https://", "http://")):
+                problems.append("AI_BASE_URL (an http(s) URL)")
+            if not self.ai_api_key.get_secret_value():
+                problems.append("AI_API_KEY")
+            if not self.ai_model.strip():
+                problems.append("AI_MODEL")
+            if problems:
+                raise ValueError("AI_PROVIDER=gateway needs " + ", ".join(problems))
+            if "@" in self.ai_base_url.split("//", 1)[1].split("/", 1)[0]:
+                raise ValueError("AI_BASE_URL must not contain credentials; use AI_API_KEY")
+            if self.app_env == "production" and not self.ai_base_url.startswith("https://"):
+                raise ValueError("AI_BASE_URL must use https in production")
         return self
+
+    @property
+    def gmail_configured(self) -> bool:
+        return bool(self.google_client_id.strip() and self.google_client_secret.get_secret_value())
+
+    @property
+    def effective_google_redirect_uri(self) -> str:
+        return (
+            self.google_redirect_uri
+            or f"{self.web_base_url.rstrip('/')}/api/v1/email/oauth/callback"
+        )
+
+    @property
+    def effective_ai_provider(self) -> str:
+        return self.ai_provider or ("disabled" if self.app_env == "production" else "mock")
 
     @property
     def secure_cookies(self) -> bool:

@@ -44,8 +44,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     label: "Leads",
     href: "/leads",
     icon: Users,
-    status: "planned",
-    phase: "MVP Prompt 6",
+    status: "available",
     description: "Leads, companies and contacts with CSV import, filtering and fit scoring.",
   },
   {
@@ -53,8 +52,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     label: "Inbox",
     href: "/inbox",
     icon: Inbox,
-    status: "planned",
-    phase: "MVP Prompt 10",
+    status: "available",
     description: "Email conversations, AI reply classification and draft review.",
   },
   {
@@ -71,8 +69,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     label: "Pipeline",
     href: "/pipeline",
     icon: KanbanSquare,
-    status: "planned",
-    phase: "MVP Prompt 7",
+    status: "available",
     description: "Opportunities by stage, with table and Kanban views.",
   },
   {
@@ -89,8 +86,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     label: "Tasks & Calendar",
     href: "/tasks",
     icon: CalendarCheck,
-    status: "planned",
-    phase: "MVP Prompt 7",
+    status: "available",
     description: "Follow-ups, reminders and deadlines.",
   },
   {
@@ -98,18 +94,18 @@ export const NAV_ITEMS: readonly NavItem[] = [
     label: "AI Workspace",
     href: "/ai-workspace",
     icon: Sparkles,
-    status: "planned",
-    phase: "MVP Prompts 5 and 8",
-    description: "Freelancer profile, approved knowledge and generation history.",
+    status: "available",
+    description:
+      "Your profile and the approved knowledge AI is allowed to use. Generation history arrives with the AI features.",
   },
   {
     id: "integrations",
     label: "Integrations",
     href: "/integrations",
     icon: Plug,
-    status: "planned",
-    phase: "MVP Prompts 9 and 14",
-    description: "Connected apps, permissions and connection diagnostics.",
+    status: "available",
+    description:
+      "Email connections: the demo mailbox now, Gmail once the server has Google credentials. Other connectors arrive with the integrations area.",
   },
   {
     id: "analytics",
@@ -150,6 +146,38 @@ const EXTRA_ROUTE_LABELS: Record<string, string> = {
   "/onboarding": "Onboarding",
 };
 
+/** Known second-level pages inside a primary destination. */
+const SUBPAGE_LABELS: Record<string, string> = {
+  "/ai-workspace/profile": "Profile",
+  "/ai-workspace/knowledge": "Knowledge",
+  "/leads/companies": "Companies",
+  "/leads/contacts": "Contacts",
+  "/leads/scoring": "Fit scoring",
+  "/leads/import": "Import",
+};
+
+const ID = "[0-9a-fA-F-]{36}";
+
+/** Detail pages: the list they belong to (when it has its own page) and their own label. */
+const DETAIL_ROUTES: readonly {
+  pattern: RegExp;
+  parent?: { label: string; href: string };
+  label: string;
+}[] = [
+  {
+    pattern: new RegExp(`^/leads/companies/${ID}$`),
+    parent: { label: "Companies", href: "/leads/companies" },
+    label: "Company",
+  },
+  {
+    pattern: new RegExp(`^/leads/contacts/${ID}$`),
+    parent: { label: "Contacts", href: "/leads/contacts" },
+    label: "Contact",
+  },
+  { pattern: new RegExp(`^/leads/${ID}$`), label: "Lead" },
+  { pattern: new RegExp(`^/pipeline/${ID}$`), label: "Deal" },
+];
+
 export function resolveBreadcrumbs(pathname: string): Crumb[] {
   const current = NAV_ITEMS.find((i) => i.href !== "/" && isActivePath(pathname, i.href));
   if (!current) {
@@ -160,10 +188,17 @@ export function resolveBreadcrumbs(pathname: string): Crumb[] {
       : [{ label: "Home", href: "/" }, { label: "Page" }];
   }
   const crumbs: Crumb[] = [{ label: "Home", href: "/" }];
+  const sub = SUBPAGE_LABELS[pathname];
   crumbs.push(
     pathname === current.href
       ? { label: current.label }
       : { label: current.label, href: current.href },
   );
+  if (sub) crumbs.push({ label: sub });
+  const detail = DETAIL_ROUTES.find((d) => d.pattern.test(pathname));
+  if (detail) {
+    if (detail.parent) crumbs.push(detail.parent);
+    crumbs.push({ label: detail.label });
+  }
   return crumbs;
 }

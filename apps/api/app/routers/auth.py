@@ -41,6 +41,7 @@ from app.schemas.auth import (
 from app.security import passwords
 from app.security.cookies import clear_session_cookie, cookie_name, set_session_cookie
 from app.security.tokens import hash_token, new_token, short_hash
+from app.services.pipeline import ensure_default_stages
 
 logger = logging.getLogger("freelancer_os.auth")
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
@@ -174,6 +175,7 @@ def sign_up(
     db.add(Membership(workspace_id=workspace.id, user_id=user.id, role="owner"))
     db.add(OnboardingProgress(workspace_id=workspace.id, completed_steps=[]))
     db.add(FreelancerProfile(workspace_id=workspace.id))
+    ensure_default_stages(db, workspace.id)
     _start_session(db, response, settings, user, info.user_agent)
     audit.record(
         db,

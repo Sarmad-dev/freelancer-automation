@@ -1,12 +1,18 @@
 import { z } from "zod";
 
 /**
- * Initial workflow definition schema (MVP Prompt 11 extends the node catalogue
- * and adds per-node config schemas and typed ports).
+ * The workflow definition as the API saves, returns and exchanges it. This mirrors
+ * `apps/api/app/workflows/definition.py` (shape) and `catalog.py` (node ports); the Python side is
+ * authoritative, this copy exists so the editor can give instant feedback.
  *
- * Execution is a backend concern; this package only describes and validates
- * the definition so the API and the editor agree on one contract.
+ * Shape errors (a bad id, an unknown key, too many nodes) are rejected by this schema. Whether the
+ * graph makes sense (unknown node types, missing ports, unreachable nodes...) is reported as issues by
+ * `validateWorkflow`, so work in progress can still be saved.
  */
+export const MAX_NODES = 50;
+export const MAX_EDGES = 100;
+export const SCHEMA_VERSION = 1;
+
 export const NODE_TYPES = [
   "trigger",
   "condition",
@@ -25,31 +31,57 @@ export const NODE_TYPES = [
 export const nodeTypeSchema = z.enum(NODE_TYPES);
 export type NodeType = z.infer<typeof nodeTypeSchema>;
 
-/** Node types that cause external side effects and therefore need an approval path. */
-export const SIDE_EFFECT_NODE_TYPES: ReadonlySet<NodeType> = new Set<NodeType>(["send_email"]);
+/** The output ports of each node type. A single default output is called "next". */
+export const NODE_PORTS: Record<NodeType, readonly string[]> = {
+  trigger: ["next"],
+  condition: ["true", "false"],
+  ai_assess_fit: ["next"],
+  ai_classify_reply: ["next"],
+  ai_draft: ["next"],
+  upsert_record: ["next"],
+  create_task: ["next"],
+  approval_gate: ["approved", "rejected"],
+  send_email: ["next"],
+  delay: ["next"],
+  notify: ["next"],
+  end: [],
+};
 
-export const workflowNodeSchema = z.object({
-  id: z.string().min(1),
-  type: nodeTypeSchema,
-  label: z.string().max(120).optional(),
+/** Node types that change records or leave the system. */
+export const SIDE_EFFECT_NODE_TYPES: ReadonlySet<NodeType> = new Set<NodeType>([
+  "upsert_record",
+  "send_email",
+]);
+
+/** The port an edge leaves from when it names none. */
+export const DEFAULT_PORT = "next";
+
+const keySchema = z.string().regex(/^[A-Za-z0-9_.-]{1,80}$/);
+const coordinate = z.number().min(-100_000).max(100_000).default(0);
+
+export const workflowNodeSchema = z.strictObject({
+  id: keySchema,
+  /** Any non-empty string: an unknown type is a validation issue, not a schema error. */
+  type: z.string().min(1).max(40),
+  label: z.string().max(120).nullish(),
   config: z.record(z.string(), z.unknown()).default({}),
-  position: z.object({ x: z.number(), y: z.number() }).default({ x: 0, y: 0 }),
+  position: z.strictObject({ x: coordinate, y: coordinate }).default({ x: 0, y: 0 }),
 });
 export type WorkflowNode = z.infer<typeof workflowNodeSchema>;
 
-export const workflowEdgeSchema = z.object({
-  id: z.string().min(1),
-  source: z.string().min(1),
-  target: z.string().min(1),
-  /** Branch label such as "true" / "false" for condition nodes. */
-  branch: z.string().max(60).optional(),
+export const workflowEdgeSchema = z.strictObject({
+  id: keySchema,
+  source: keySchema,
+  target: keySchema,
+  /** The source's output port, such as "true" / "approved". Empty or null means the default port ("next"). */
+  branch: z.string().max(60).nullish(),
 });
 export type WorkflowEdge = z.infer<typeof workflowEdgeSchema>;
 
-export const workflowDefinitionSchema = z.object({
-  schemaVersion: z.literal(1),
-  nodes: z.array(workflowNodeSchema),
-  edges: z.array(workflowEdgeSchema),
+export const workflowDefinitionSchema = z.strictObject({
+  schemaVersion: z.literal(SCHEMA_VERSION).default(SCHEMA_VERSION),
+  nodes: z.array(workflowNodeSchema).max(MAX_NODES).default([]),
+  edges: z.array(workflowEdgeSchema).max(MAX_EDGES).default([]),
 });
 export type WorkflowDefinition = z.infer<typeof workflowDefinitionSchema>;
 

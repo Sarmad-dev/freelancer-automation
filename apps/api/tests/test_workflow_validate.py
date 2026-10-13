@@ -439,3 +439,27 @@ def test_validation_does_not_stop_at_the_first_problem_and_messages_name_the_nod
 
 def test_templates_only_fill_known_placeholders() -> None:
     assert render("Hi {lead_title} {unknown} {category}", {"lead_title": "Acme"}) == "Hi Acme  "
+
+
+# ----------------------------------------------------------------------------- shared fixtures (the editor's checks agree with these)
+
+
+def test_the_structural_checks_agree_with_the_shared_fixtures() -> None:
+    """``packages/workflow-core`` (what the editor runs while you draw) must report the same structural problems as the
+    server for every fixture. Settings, data flow and safety are checked by the server only."""
+    import json
+    from pathlib import Path
+
+    path = (
+        Path(__file__).resolve().parents[3]
+        / "packages"
+        / "workflow-core"
+        / "fixtures"
+        / "structure.json"
+    )
+    data = json.loads(path.read_text())
+    structural = set(data["structural_codes"])
+    assert len(data["cases"]) >= 15
+    for case in data["cases"]:
+        report = check(case["definition"]["nodes"], case["definition"]["edges"])
+        assert sorted({i.code for i in report.issues} & structural) == case["codes"], case["name"]

@@ -52,8 +52,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     label: "Inbox",
     href: "/inbox",
     icon: Inbox,
-    status: "planned",
-    phase: "MVP Prompt 10",
+    status: "available",
     description: "Email conversations, AI reply classification and draft review.",
   },
   {

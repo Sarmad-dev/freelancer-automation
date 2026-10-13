@@ -56,6 +56,9 @@ class ClassificationOut(BaseModel):
 class StopOut(BaseModel):
     """Contact has been stopped: nothing will be sent to this address."""
 
+    id: uuid.UUID = Field(
+        description="The do-not-contact entry (remove it with DELETE /suppressions/{id})."
+    )
     reason: StopReason
     address: str
     since: datetime

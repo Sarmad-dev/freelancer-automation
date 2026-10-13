@@ -232,6 +232,7 @@ def summarize(
                     review_text=REVIEW_TEXT.get(c.review_reason or "") if c.needs_review else None,
                 ),
                 stop=StopOut(
+                    id=stop_entry.id,
                     reason=stop_entry.reason,
                     address=stop_entry.email_normalized,
                     since=stop_entry.created_at,

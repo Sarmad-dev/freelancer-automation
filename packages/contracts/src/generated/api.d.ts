@@ -4011,6 +4011,12 @@ export interface components {
             /** Address */
             address: string;
             /**
+             * Id
+             * Format: uuid
+             * @description The do-not-contact entry (remove it with DELETE /suppressions/{id}).
+             */
+            id: string;
+            /**
              * Reason
              * @enum {string}
              */

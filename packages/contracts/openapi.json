@@ -7228,6 +7228,12 @@
             "title": "Address",
             "type": "string"
           },
+          "id": {
+            "description": "The do-not-contact entry (remove it with DELETE /suppressions/{id}).",
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
           "reason": {
             "enum": [
               "unsubscribe",
@@ -7250,6 +7256,7 @@
           }
         },
         "required": [
+          "id",
           "reason",
           "address",
           "since",

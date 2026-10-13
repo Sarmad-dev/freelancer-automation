@@ -205,3 +205,24 @@ Approval binds to a hash of recipient, subject and body, so what is sent is exac
 ## D54 — Revocation and disconnect never depend on the provider being reachable
 A failed token refresh (`invalid_grant`) moves the account to `needs_reauth` and stops provider calls. Disconnect deletes our copy of the credentials even if revocation could not be confirmed, and says so; keeping a credential because a provider is down would be worse than asking the person to remove access on the provider's side.
 
+
+## D55 — Message bodies are stored cleaned, in their own table, and can be deleted
+Prompt 9 kept only metadata and a snippet. The inbox needs readable threads, so a cleaned body is stored per message in `message_bodies` (text normalised and capped; HTML rebuilt by an allow-list sanitiser). It is separate so an owner can delete synced mail (`DELETE …/email/accounts/{id}/mail`) without touching classifications or the audit trail. Attachments stay metadata only. Logs and audit never carry message content.
+
+## D56 — HTML is sanitised on the server and still rendered in a sandbox
+The server removes scripts, styles, forms, event handlers, unsafe URL schemes and relative links, and **removes images and all remote content** (a flag says so) so reading mail never contacts a third party or reveals that it was read. The web app shows formatted HTML only inside a sandboxed iframe with a restrictive CSP; plain text is the default. Two independent layers because a sanitiser bug alone must not become cross-site scripting.
+
+## D57 — Classification runs as database-backed jobs
+One `email_jobs` row per (message, kind), claimed with a conditional UPDATE under a 5-minute lease, retried with backoff, and failed into a human review state (`classification_failed`) rather than guessed. A DB queue needs no new infrastructure and survives restarts; workers run after a sync request returns or via `python -m app.cli process-jobs`. A scheduler and external queue arrive with Prompt 11.
+
+## D58 — Uncertain results go to a person, with a reason
+Low confidence (< 0.7), a rule-based fallback, suspected injection, an unconfirmed unsubscribe, or a failed job flag the conversation `needs_review` with a stable reason code. The model must quote evidence that really appears in the message or its result is rejected.
+
+## D59 — Only a deterministic opt-out rule can suppress automatically
+An unsubscribe puts the sender on the do-not-contact list only when an explicit opt-out phrase is found by the rules; a model saying "unsubscribe" alone yields `needs_review`. A bounce notice from a mail-system sender suppresses the last outbound recipient. A person can still classify manually. Suppression is checked again server-side at send time regardless of what the UI showed.
+
+## D60 — Suggested replies are ordinary drafts
+A reply suggestion calls `draft_outreach` with the incoming message fenced as untrusted data and approved facts only, and stores the result as an AI draft that must be edited or approved and then sent through the Prompt 9 guard (approval hash, idempotency, suppression). The facts used are returned so the UI can show them. Nothing in the inbox sends mail.
+
+## D61 — One follow-up gate for future automation
+`follow_ups.check()` is the single place that decides whether an automated follow-up may go: not if the recipient is suppressed, not if they replied after our last message. Workflows (Prompt 11+) must call it; no sequence engine exists yet.

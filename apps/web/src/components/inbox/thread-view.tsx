@@ -105,8 +105,10 @@ export function ThreadView({
           </div>
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <dt className="text-muted">Mailbox</dt>
-            <dd className="min-w-0 break-words text-fg">{thread.account_email}</dd>
-            {thread.is_demo ? <Badge tone="info">Demo</Badge> : null}
+            <dd className="flex min-w-0 flex-wrap items-center gap-2 break-words text-fg">
+              {thread.account_email}
+              {thread.is_demo ? <Badge tone="info">Demo</Badge> : null}
+            </dd>
           </div>
           {thread.lead ? (
             <div className="flex min-w-0 gap-2">

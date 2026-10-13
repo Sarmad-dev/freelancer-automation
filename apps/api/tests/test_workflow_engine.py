@@ -1049,3 +1049,120 @@ def test_a_reply_starts_the_workflow_once_and_the_run_classifies_and_acts(mail: 
     assert run["context"]["classification"]["category"] in ("interested", "question")
     titles = [t["title"] for t in mail.client.get(mail.url("/tasks")).json()["items"]]
     assert any(t.startswith("Answer the ") and t.endswith(" reply") for t in titles)
+
+
+# ----------------------------------------------------------------------------- defence in depth
+
+
+def test_the_decision_itself_refuses_a_draft_that_no_longer_matches_what_was_requested(
+    mail: WfEnv,
+) -> None:
+    _wf, run_id, _lead = start_to_approval(mail, live=True)
+    (approval,) = mail.approvals()
+    draft = mail.draft(approval["draft_id"])
+    draft.body_text = "Changed behind the service's back."  # an edit that skipped the usual path
+    mail.db.commit()
+    res = mail.decide(approval["id"], "approve", expect=409)
+    assert res["error"]["code"] == "approval_invalidated"
+    assert mail.approvals(None)[0]["status"] == "invalidated"
+    assert mail.fake is not None and mail.fake.sent == []
+
+
+def test_sending_refuses_unless_this_run_was_approved_for_this_draft(mail: WfEnv) -> None:
+    import uuid
+
+    from app.db.models_workflow import ApprovalRequest, WorkflowRun
+    from app.db.session import get_sessionmaker
+    from app.workflows import executors
+    from app.workflows.errors import StepFailure
+
+    _wf, run_id, _lead = start_to_approval(mail, live=True)
+    (approval,) = mail.approvals()
+    mail.decide(approval["id"], "approve")
+    other_run = mail.start(
+        mail.create(linear(node("w", "delay", amount=1, unit="hours"))),
+        mail.lead("Other", "o@acme.example")["id"],
+    )["run"]["id"]
+    other_draft = mail.client.post(
+        mail.url("/drafts"), json={"to_address": "x@acme.example", "subject": "s", "body_text": "b"}
+    ).json()["id"]
+    real_hash = mail.draft(approval["draft_id"]).content_hash
+    with get_sessionmaker()() as db:
+        run = db.get(WorkflowRun, uuid.UUID(run_id))
+        assert run is not None
+        # nothing recorded in the run yet: nothing to send
+        with pytest.raises(StepFailure) as err:
+            executors.run_send_email(step_env_for_send(mail, db, run_id))
+        assert err.value.category == "not_approved"
+        run.context = {
+            **run.context,
+            "approval_id": approval["id"],
+            "approved_draft_id": approval["draft_id"],
+        }
+        row = db.get(ApprovalRequest, uuid.UUID(approval["id"]))
+        assert row is not None
+        tampers = {
+            "pending": {"status": "pending"},
+            "rejected": {"status": "rejected"},
+            "someone else's run": {"run_id": uuid.UUID(other_run)},
+            "another draft": {"draft_id": uuid.UUID(other_draft)},
+            "another text": {"payload_hash": "0" * 64},
+        }
+        for name, change in tampers.items():
+            row.status, row.run_id, row.draft_id, row.payload_hash = (
+                "approved",
+                uuid.UUID(run_id),
+                uuid.UUID(approval["draft_id"]),
+                real_hash,
+            )  # type: ignore[assignment]
+            for field, value in change.items():
+                setattr(row, field, value)
+            db.flush()
+            with pytest.raises(StepFailure) as err:
+                executors.run_send_email(step_env_for_send(mail, db, run_id))
+            assert err.value.category == "not_approved", name
+        db.rollback()
+    assert mail.fake is not None and mail.fake.sent == []
+
+
+def step_env_for_send(env: WfEnv, db: DbSession, run_id: str) -> object:
+    from tests.workflow_helpers import step_env
+
+    return step_env(env, db, run_id, "s")
+
+
+def test_a_new_draft_clears_an_earlier_approval_from_the_run() -> None:
+    from datetime import UTC, datetime
+
+    from app.db.models_workflow import WorkflowRun, WorkflowStepRun
+    from app.workflows import engine
+    from app.workflows.runtime import Advance
+
+    loaded = engine.LoadedVersion(
+        version_id=__import__("uuid").uuid4(),
+        nodes={
+            "d": engine.LoadedNode("d", "ai_draft", None, {}),
+            "next": engine.LoadedNode("next", "end", None, {}),
+        },
+        edges={("d", "next"): "next"},
+    )
+    run = WorkflowRun(
+        context={"draft_id": "old", "approved_draft_id": "old", "approval_id": "a"},
+        steps_taken=0,
+        attempt_floor=0,
+    )
+    step = WorkflowStepRun(attempt=1)
+    outcome = engine._apply_advance(
+        None,  # type: ignore[arg-type]
+        run,
+        loaded.nodes["d"],
+        step,
+        loaded,
+        Advance(output={}, context={"draft_id": "new"}),
+        datetime.now(UTC),
+    )
+    assert (
+        outcome == "continue"
+        and run.context == {"draft_id": "new"}
+        and run.current_node_key == "next"
+    )

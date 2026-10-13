@@ -254,3 +254,37 @@ class WfEnv:
             )
         )
         self.db.commit()
+
+
+def step_env(env: WfEnv, db: DbSession, run_id: str, node_key: str, *, attempt: int = 1) -> Any:
+    """A ``StepEnv`` for calling one executor directly (to check what it refuses)."""
+    from app.workflows.engine import _parse, load_version
+    from app.workflows.runtime import StepEnv, owner_context
+
+    run = db.get(WorkflowRun, uuid.UUID(run_id))
+    assert run is not None
+    loaded = load_version(db, run.workspace_id, run.version_id)
+    definition = loaded.nodes[node_key]
+    step = db.scalars(
+        select(WorkflowStepRun).where(
+            WorkflowStepRun.run_id == run.id, WorkflowStepRun.node_key == node_key
+        )
+    ).first()
+    if step is None:
+        step = WorkflowStepRun(
+            workspace_id=run.workspace_id, run_id=run.id, node_key=node_key, attempt=attempt
+        )
+    return StepEnv(
+        db=db,
+        run=run,
+        step=step,
+        node_key=node_key,
+        node_type=definition.type,
+        cfg=_parse(definition),
+        attempt=attempt,
+        ctx=owner_context(db, run.workspace_id),
+        deps=env.deps(),
+        now=env.clock(),
+        mode=run.mode,
+        timeout_seconds=30,
+    )
